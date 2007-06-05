@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="Author" content="WHF">
+	<title>HttpMonitor User Manual</title>
+	<link rel="STYLESHEET" href="/stylesheets/rbnbstyles.css" type="text/css">
+</head>
+<body>
+	<h1>HttpMonitor</h1>
+	<h2>User Manual</h2>
+	<h3>V2.6</h3>
+	<h3>April 13th, 2005</h3>
+	<h3>Copyright, Creare Inc.</h3>
+
+	<h4>Introduction</h4>
+	<p><span class="application">HttpMonitor</span> is an application which
+	copies files from any URL to any WebDAV server.  It monitors the
+	remote site for changes, and updates the destination whenever a change
+	occurs.</p>
+	<h4>Usage</h4>
+	<p><span class="application">HttpMonitor</span> may be started from the 
+	command line using the following syntax:</p>
+	<div class="codestyle" style="text-align: center;">
+		java -jar HttpMonitor.jar <b>config-file</b></div>
+	<p>It can also be started from the WebTurbine interface.</p>
+	
+	<h4>Configuration File</h4>
+	<p>The configuration file is an XML file which specifies where the source
+	files are located, and where to place them.  As an example:</p>
+	<pre class="codestyle">
+&lt;monitor destURLPath=&quot;http://whf/RBNB/Video/&quot; minimumInterval=&quot;250&quot;
+		deltaFraction=&quot;0.5&quot;
+		mkcolQuery=&quot;?archive=25000&amp;amp;cache=100&quot; debug=&quot;true&quot;&gt;
+	&lt;resource&gt;
+		&lt;url&gt;http://wrbv1.creare.com/cgi-bin/camera.jpg&lt;/url&gt;
+		&lt;destFile&gt;farmhouse.jpg&lt;/destFile&gt;
+	&lt;/resource&gt;
+&lt;/monitor&gt;
+	</pre>
+	<p>The configuration file has the following elements:</p>
+	<ul><li>monitor.  Root element.  Children: resource.  Attributes: <ul>
+		<li>destURLPath - the URL folder where the files will be copied.</li>
+		<li>destPrefix  - if specified, filenames will be automatically 
+		generated at the destination using this prefix and an integer.</li>
+		<li>deltaFraction - the percentage of the calculated delay
+		interval to use
+		until the next update.  Values smaller than 100 cause more requests 
+		than necessary but guarantee that resource updates are not missed.</li>
+		<li>minimumInterval - the smallest allowed interval between updates.</li>
+		<li>maximumInterval - the largest allowed interval between updates.</li>
+		<li>mkcolQuery - the query string used with the MKCOL WebDAV command
+		to create the destination folder.</li>
+		<li>debug - if set to "true", text is spewed to the 
+		console as files are downloaded.</li></ul></li>
+		
+		<li>resource.  Parent: monitor.  Children: url, destFile  
+				Attributes: none.  </li>
+		<li>url.  Parent: resource.  Children: none.  Attributes: none.
+			Contains the url to use to find this resource.</li>
+		<li>destFile.  Parent: resource.  Children: none.  Attributes: none.
+			Contains the filename to use at the destination.  Overrides the
+			destPrefix feature.</li>
+	</ul>
+	<p>If neither destPrefix is set globally, nor destFile used on a particular
+	resource, the resource will be copied using its source filename.</p>
+
+	<p class="footer"><a href="/webTurbine">Home</a></p>
+</body>
+</html>
+
