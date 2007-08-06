@@ -58,6 +58,7 @@
 
  <!-- DataTurbine obfuscation target. -->
  <target name="obfuscate-dataturbine" depends="library-dataturbine">
+ <!-- commented out by pfh - OSS now!
   <mkdir dir="${rbnb.obfuscatedir}" />
   <proguard configuration="${rbnb.obfuscate.configuration}"
             printmapping="${rbnb.obfuscatedir}/mapping.out"
@@ -67,6 +68,7 @@
    <injar name="${rbnb.librarydir}/rbnb.jar" />
    <outjar name="${rbnb.obfuscatedir}/rbnb.jar" />
   </proguard>
+ -->
  </target>
 
  <!-- The following paths are used by reference by Javadoc to locate its source
