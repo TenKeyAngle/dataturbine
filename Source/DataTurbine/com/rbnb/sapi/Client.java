@@ -737,18 +737,8 @@ public abstract class Client implements java.io.Serializable
 			} catch (Exception e) 
 		{ /* throw new SAPIException(e); */ }
 	}
-	
-	final Server getServer() { return server; }
 
-	/**
-	  * Intended for use with Control clients.
-	  */
-/*	final void terminateLocalServer()
-	{
-		server.stop();
-		server = null;
-		clearData();
-	} */
+	
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////// Static Utility Methods: /////////////////////////////
 	/**

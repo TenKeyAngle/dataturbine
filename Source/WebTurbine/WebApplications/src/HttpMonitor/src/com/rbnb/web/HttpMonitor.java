@@ -36,9 +36,6 @@ limitations under the License.
 	2007/06/20  WHF  Several algorithm changes intended to improve performance
 			under certain scenarios.
 	2007/06/27  WHF  Reset successCount on failure and failCount on success.
-	2007/07/10  WHF  Read timeout on URLConnection.
-	2007/07/30  WHF  Added initialSleep child of <resource>, staggerStartup
-			attribute.
 */
 
 package com.rbnb.web;
@@ -127,20 +124,6 @@ public abstract class HttpMonitor
 		  */
 		public URL getDestination() { return dest; }
 		
-		/**
-		  * In milliseconds.
-		  */
-		public long getInitialSleep() { return initialSleep; }
-		/**
-		  * Sets the time to wait before downloading a resource for the 
-		  *  first time.  The defualt is zero.
-		  */
-		public void setInitialSleep(long is)
-		{
-			initialSleep = is;
-			nextRequestTime = System.currentTimeMillis() + is;
-		}
-		
 		public long getMinimumInterval() { return minInterval; }
 		
 		/**
@@ -186,17 +169,6 @@ public abstract class HttpMonitor
 					source.openConnection();
 			boolean success = false;
 			byte[] ba = null;
-			
-			// Set the read timeout, if the Java version supports it.
-			if (urlConnectionReadTimeoutMethod != null) {
-				try {
-					Object[] args = { new Integer(resourceReadTimeout) }; 
-					urlConnectionReadTimeoutMethod.invoke(
-							srcCon,
-							args
-					);
-				} catch (Throwable t) {}
-			}
 					
 			// Set the If-Modified-Since header if possible.  This signals
 			//  the server to not send the file if we already have the most
@@ -538,7 +510,7 @@ public abstract class HttpMonitor
 		  */
 		private String auth;
 		private long prevLocalDate, prevLastMod, nextRequestTime, delta,
-				minInterval, maxInterval, initialSleep;
+				minInterval, maxInterval;
 		private final java.util.Date logDate = new java.util.Date();
 		private int successCount, failCount;
 				
@@ -592,6 +564,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	  * A SAX handler to process the configuration file.
 	  */
 	protected static class ConfigParser extends RootParser
+		
 	{
 		ConfigParser(String fname) throws IOException, SAXException
 		{
@@ -692,14 +665,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 					destPrefix = attributes.getValue("destPrefix");
 				}
 				
-				if ((temp = attributes.getValue("staggerStartup")) != null) {
-					stagger = Long.parseLong(temp);
-				}
-				
-				if ((temp = attributes.getValue("readTimeout")) != null) {
-					resourceReadTimeout = Integer.parseInt(temp);
-				}
-				
 				if ((temp = attributes.getValue("debug")) != null) {
 					debug = Boolean.valueOf(temp).booleanValue();
 				}
@@ -739,10 +704,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 						"<gate> cannot be a child of <resource>.");
 				clear();
 				inGate = true;
-			} else if ("url".equals(qName) && !inResource && !inGate) {
-				// this can be a top level tag for backward compatability.
-				clear();
-			}
+			}				
 		}
 		
 		public void characters(char[] ch, int start, int length)
@@ -781,8 +743,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 				user = sbuffer.toString();
 			else if ("password".equals(qName))
 				password = sbuffer.toString();
-			else if ("initialSleep".equals(qName) && (inResource || inGate))
-				iSleep = Long.parseLong(sbuffer.toString());
 			else if ("minimumInterval".equals(qName) && (inResource || inGate))
 				minInterval = Long.parseLong(sbuffer.toString());
 			else if ("maximumInterval".equals(qName) && (inResource || inGate))
@@ -800,21 +760,12 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 				defaultUser = user;
 				defaultPassword = password;
 				
-				if (putAuth == null)
-					setPutAuth(defaultUser, defaultPassword);
-			} else if ("putAuth".equals(qName) && !(inResource || inGate)) {
-				// Global auth for all puts:
-				setPutAuth(user, password);
+				// Create a resource to make the authorization for puts:
+				Resource r = new Resource(null, null);
+				r.setAuthorization(defaultUser, defaultPassword);
+				putAuth = r.getAuthorization();
 			}
 		}
-		
-		public void endDocument() throws SAXException
-		{
-			//Sort the queues, to support initialSleep:
-			Collections.sort(resourceQueue);
-			Collections.sort(gateQueue);
-			Collections.sort(configQueue);
-		}			
 		
 		public void error(SAXParseException e)
 		{ System.err.println("Parse error: "); e.printStackTrace(); }
@@ -828,7 +779,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 		{ 
 			srcUrl = null; 
 			destFile = user = password = null;
-			minInterval = maxInterval = iSleep = 0L;
+			minInterval = maxInterval = 0L;
 		}
 	
 		protected final StringBuffer getCharacters() { return sbuffer; }
@@ -845,26 +796,13 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 				res.setMinimumInterval(minInterval);
 			if (maxInterval != 0L)
 				res.setMaximumInterval(maxInterval);
-			if (iSleep != 0L) {
-				res.setInitialSleep(iSleep);
-				nextSleep = iSleep + stagger;
-			} else if (stagger != 0L) {
-				res.setInitialSleep(nextSleep);
-				nextSleep += stagger;
-			}
 		}			
 		
 	//******************************  Data  **********************************//
 		private final StringBuffer sbuffer = new StringBuffer();		
 		private URL srcUrl;
 		private String destFile, user, password;
-		private long minInterval, maxInterval, iSleep, nextSleep = 0;
-		/**
-		  * An interval to add between consecutive resources loading for the
-		  *  first time during startup.
-		  */
-		private long stagger = 0L;
-		
+		private long minInterval, maxInterval;
 		private boolean inResource = false, inGate = false;
 	} // end class ConfigParser
 
@@ -1202,14 +1140,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	
 	protected static java.util.List getResourceQueue() { return resourceQueue; }
 	
-	protected static void setPutAuth(String user, String pword)
-	{
-		// Create a resource to make the authorization for puts:
-		Resource r = new Resource(null, null);
-		r.setAuthorization(user, pword);
-		putAuth = r.getAuthorization();
-	}				
-	
 	/**
 	  * HttpMonitor main.  The main function takes one argument, the 
 	  *   XML file to use for configuration.
@@ -1296,28 +1226,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	private static DatagramSocket udpSocket;
 	
 	/**
-	  * The amount of time allowed for a resource download.  Functional
-	  *  only on Java 1.5 or later.  The default is 60000 (one minute).
-	  */
-	private static int resourceReadTimeout = 60000;
-	
-	private static final java.lang.reflect.Method urlConnectionReadTimeoutMethod;
-	
-	static {
-		java.lang.reflect.Method temp = null;
-		try {
-			Class[] args = { int.class }; 
-			temp = URLConnection.class.getDeclaredMethod(
-					"setReadTimeout",
-					args
-			);
-		} catch (Throwable t) {
-			System.err.println("Read Timeout not available.");
-		}
-		urlConnectionReadTimeoutMethod = temp;
-	}	
-	
-	/**
 	  * Percentage of the calculated interval to use until the next update.
 	  *  Values smaller than 100 cause more updates than necessary but 
 	  *  guarantee that resource updates are not missed.
@@ -1336,7 +1244,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	  *  network bandwidth in cases where a resource is down.
 	  */
 	static int failCountToMax = 5;
-		
 	static String destURLPath, destPrefix, mkcolQuery, 
 			defaultUser, defaultPassword, putAuth;
 	static boolean debug = false, resetResources = false;

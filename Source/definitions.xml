@@ -9,10 +9,6 @@
 	 
 	 ***  History  ***
 	 2004/12/28  WHF  Added rbnb.javaver property. 
-	 2007/08/17  JPW  Since Third_Party directory has been moved outside of
-	                  Source, I changed the definition of
-			  "rbnb.thirdpartydir".  Add a check that Third_Party
-			  exists in proper location (fail build if it isn't).
  -->
 
 <project name="DEFINITIONS">
@@ -40,11 +36,8 @@
 
  <!-- The third party source directory contains code from others used by the
       RBNB system.
-
-      JPW 08/17/2007: Move Third_Party outside of Source directory
-
   -->
- <property name="rbnb.thirdpartydir" value="${rbnb.basedir}/Third_Party" />
+ <property name="rbnb.thirdpartydir" value="${rbnb.sourcedir}/Third_Party" />
 
  <!-- The build directory contains all of the intermediate files created by
       the build system.  This directory can be deleted and then rebuilt by
@@ -82,12 +75,7 @@
 		require different versions than this flag, but this is intended as the
 		default for all targets. -->
  <property name="rbnb.javaver" value="1.4" />
- 
- <!-- JPW 08/17/2007: Check for the existance of the Third_Party directory -->
- <!--                 NOTE: Perform this check before setting the taskdefs -->
- <available file="${rbnb.thirdpartydir}" type="dir" property="thirdparty.present"/>
- <fail unless="thirdparty.present" message="Missing ${rbnb.thirdpartydir}"/>
- 
+
  <!-- ProGuard is a freely distributable obfuscator that integrates with
       ant. -->
  <taskdef name="proguard"

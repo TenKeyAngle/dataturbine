@@ -9,220 +9,29 @@
   <title>RBNB V2 Release Notes</title>
 </head>
 <body>
-<h1>RBNB V3.0 Release Notes</h1>
+<h1>
+RBNB V2.6 Release Notes</h1>
 This release of the RBNB system contains the following changes:<br>
-<h2>V3.0 Production</h2>
-<li>Code is frozen as a stable production release.</li>
-<h2>V3.0B4 to V3.0B5 Changes</h2>
-<li>Both "push" and "pull" mirrors now have reconnect logic</li>
-<li>Added limited support for displaying 3D icons (".dae" models) to TrackKMLPlugIn.  An "Icon Scale" combo box has been added to the GUI which allows the user to specify the scale for both 2D and 3D icons.</li>
-<h2>V3.0B3 to V3.0B4 Changes</h2>
-<li>RBNBPlot's font size can be specified with the java debug flag -Dplot.fontsize=N</li>
-<li>"Pull" mirrors will automatically reconnect if the network link goes down.  This is a beta test change, with "push" mirrors to follow in a future release.</li>
-<li>Parameters targeted to specific plugins can now be specified via both the URL "munge" interface and the API.  
-The URL syntax is "?pio=plug-in-name,key1=value1,...,keyn=valuen".
-The API interface is ChannelMap.AddPlugInOption()</li>
-<h2>V3.0B2 to V3.0B3 Changes</h2>
-<li>Fixed bug in ResamplePlugin so it now handles multiple channels per request
-<h2>V3.0B1 to V3.0B2 Changes</h2>
-<h3>rbnbServer</h3>
-<ul>
-  <li>Plugins now properly handle "Monitor" mode by passing through source frames consistent with how a direct (non-plugin) connection works
-  <li>Mirrors forward registration metadata (also known as "User Info").
-  <li>Subscribe to oldest and Mirror from oldest bug fix in the case where the Subscription/Mirror is set up before data is in the Source and the Source has registered channels.
-  <li>Tweeks to server thread-locking logic should make it less likely for certain rare but annoying thread-lockup problems to happen
-</ul>
-<h3>Developer API</h3>
-<ul>
-  <li>When a user registers channels in a Source, it is now allowed to have a mix of channels with and without registration metadata (also known as "User Info").
-</ul>
-<h2>V2.6 to V3.0B1 Changes</h2>
-V3.0B1 is the first beta release of V3 RBNB.  It is identical to
-V2.6 except that it is being released under the Apache 2.0 Open Source
-license.  See the 
-revised EULA for license details, and the new "Source" link to download
-source code.
-Future releases will provide build/source documentation as available.  
-<h2>V2.6B6 to V2.6 Changes</h2>
-V2.6 is a stable production release.<br>
-<h3>rbnbServer</h3>
-<ul>
-  <li>Various archive-recovery tweeks.  Fire-walled an obscure infinite
-recovery loop problem; continued archive-robustness logic TBD.
-</ul>
-<h3>Plugins</h3>
-<ul>
-<li>Resample plugin
-added that will downsample and/or limit the amount of numerical
-data fetched through it, similar to ThumbNail for images.
-</ul>
-<h2>V2.6B5 to V2.6B6 Changes</h2>
-<h3>rbnbServer</h3>
-<ul>
-  <li>Changed the archive-append logic. Now, when a source opens an
-archive for append and changes the size (number of frames) of the
-archive, no data is trimmed. Rather, any change to the archive size
-applies to new filesets as they are written, such that the new size
-will be achieved after a complete set of data at the new size is
-written. This change is to prevent the inadvertent loss of previously
-recorded data.</li>
-  <br>
-  <li>Backed out the one-deep default registration request logic change
-of V2.6B5.
-This caused problems where plugins and routes could be flooded with
-repeated registration requests, e.g. from the WebDAV interface.
-  </li>
-  <li>Various archive-recovery tweeks.  Fire-walled an obscure infinite
-recovery loop problem; continued archive-robustness logic TBD.
-</ul>
-<h3>TrackKMLPlugIn</h3>
-<ul>
-  <li>Add support for munge-settable display parameter options:
-KmlLabel, KmlSort, KmlIcon, KmlColor, KmlCurtain</li>
-  <li>In the configuration file, add support for custom Type and
-Classification color mapping<br>
-  </li>
-</ul>
-<h2>V2.6B4 to V2.6B5 Changes</h2>
-<h3>rbnbServer</h3>
-<ul>
-  <li>Fixed a bug where a source would detach, then reconnect and write
-more data, would fail to properly register the new data, thus making it
-unavailable upon subsequent reloading the archive.</li>
-  <br>
-  <li>Improved archive recovery logic to use much less memory, enabling
-the recovery of very large archives. To force the recovery of an
-archive at any level, remove the associated "seal.rbn" files from the
-archive directory tree. Also extended the range of potential types of
-archive corruption that can be handled by the recovery process.</li>
-  <br>
-  <li>Changed default behavior to (once again) use multiple framesets
-per cache. Using a small number of framesets per cache improved
-playback performance, but could hurt source performance for large
-numbers (e.g. 500) channels. Symptoms would be a surge of CPU use on
-each cache-flush. The old behavior can still be invoked by using the
--Dnumframesets=N (N&gt;0).</li>
-</ul>
-<h3>PlugIns</h3>
-<ul>
-  <li>Enhanced server-side plugin handler to automatically convert
-streaming (monitor, subscribe) modes into a sequence of requests. This
-enables streaming through most existing plugins without modification.</li>
-  <br>
-  <li>PlugInTemplate class added to streamline plugin development.</li>
-  <br>
-  <li>ThumbNail and PNGPlugIns converted to use PlugInTemplate.</li>
-</ul>
-<h3>Developer API</h3>
-<ul>
-  <li>The RequestRegistration() method with no arguments now defaults
-to a "*/..." request. That is, default registration requests will go
-one-deep into PlugIns and Routing connections to better enable
-selection of channels from applications with pull-down menus etc.</li>
-</ul>
-<h3>TimeDrive</h3>
-<ul>
-  <li>Add multi-user support, where each user has control of their own
-time munge parameters. Two multi-user modes: based on IP address (the
-default) and using HTTP Basic Authorization (user is prompted for a
-username/password).</li>
-</ul>
-<h3>HttpForward servlet</h3>
-<ul>
-  <li>A new servlet delivered with Tomcat. Allows a client which can
-connect to Tomcat (standard port 80 access) to make requests of servers
-running at ports to which they may not have access. Client connects to
-Tomcat and then HttpForward servlet passes this request on as part of a
-user-defined URL. For example, this servlet can be used to provide
-TimeDrive support to clients who only have port 80 access to Tomcat.</li>
-</ul>
-<h3>TrackKMLPlugIn and TrackDataPlugIn</h3>
-<ul>
-  <li>KMLTrackPlugIn has been broken up into these two modular
-components. Together, these PlugIns convert a series of RBNB alt, lat,
-lon data points into a KML document viewable with Google Earth.
-TrackDataPlugIn handles the low-level RBNB data requests;
-TrackKMLPlugIn formats this data into a KML.</li>
-</ul>
-<ul>
-  <li>Changes in TrackDataPlugIn</li>
-  <ul>
-    <li>Add "append=&lt;chan&gt;" munge to request data on an extra
-channel (used as pseudo-alt channel in TrackKMLPlugIn)</li>
-    <li>Add "tactical=1" munge to obtain a full duration worth of data
-on the ancillary channels (including Speed and Heading)</li>
-  </ul>
-</ul>
-<ul>
-  <li>Changes in TrackKMLPlugIn</li>
-  <ul>
-    <li>If an extra channel (an "append" channel) comes back from
-TrackDataPlugIn, display it as a pseudo-alt track.<br>
-    </li>
-  </ul>
-</ul>
+<span style="font-weight: bold;"><br>
+</span>
 <h2>V2.6B3 to V2.6B4 Changes</h2>
 <h3>rbnbServer</h3>
 <ul>
-  <li>As part of cache/archive optimization, changed logic to write
-entire cache to archive (vs in parts). This means you want a cache that
-is no larger than needed for efficient disk-block write efficiency,
-e.g. 100 frames.</li>
-  <li>Workaround for archive writing inconsistancy on some
-multiprocessor
-machines added to FrameSet.writeToArchive()</li>
-  <li>Incoming single-channel frames are recast in a more efficient
-format, which reduces archive sizes and greatly improves read
-performance.</li>
-  <li>Plain userinfo registration data is updated to xml format.</li>
-  <li>Add "-H" command line flag to specify the archive home directory.<br>
-  </li>
-</ul>
-<h3>rbnbAdmin</h3>
-<ul>
-  <li>Add "-u" command line flag to specify username.</li>
-</ul>
-<h3>rbnbPlayer</h3>
-<ul>
-  <li>In single-point mode, when Player is sleeping (for rate/pacing
-control), the time on the Position slider is updated - this provides
-feedback to the user that Player isn't "stuck", rather it is just
-pacing its output.&nbsp; Note, however, that the location of the
-Position slider itself is not updated - just the time label is updated.</li>
-</ul>
-<h2>V2.6B1 to V2.6B3 Changes</h2>
+<li>Plain userinfo registration data is updated to xml format.</li>
+</ul><h2>V2.6B1 to V2.6B3 Changes</h2>
 <h3>WebTurbine</h3>
-Rebuilt code to run with JRE (versus full JDK required with previous
-release).
+Rebuilt code to run with JRE (versus full JDK required with previous release).
 <h3>rbnbServer</h3>
-A "frameset" is a collection of cache frames which are written to the
-archive. The rbnbServer code has been modified to set the default
-number of framesets to 2. For example, if a Source has 100 cache
-frames, then by default this cache is broken up into 2 framesets of 50
-frames each. If this Source has an archive, then the archive will be
-appended each time 50 new frames arrives in the Source.
-<br>
-<br>
-A new RBNB Server command line option has been added for setting the
-number of framesets in each cache, "-Dnumframesets=&lt;positive
-integer&gt;". For example, if a Source is created which has 1000 cache
-frames, and if the RBNB Server was started with the command line option
-"-Dnumframesets=5", then this Source's cache is broken up into 5
-framesets of 200 frames each. If this Source has an archive, then the
-archive will be appended each time 200 new frames arrives in the
-Source.
-<br>
-<br>
-If the user specifies "-Dnumframesets=0" on the RBNB Server command
-line, this is a special case which tells the Server to set the number
-of framesets for each Source equal to the square root of the number of
-cache frames in the Source. This is equivalent to the legacy method of
-setting the number of framesets (before the Server change to set the
-default number of framesets to 2, see above for details). For example,
-if the RBNB Server command line included "-Dnumframesets=0" and a
-Source is created which has 100 cache frames, then the number of
-framesets will be set to 10 (since the square root of 100 is 10), and
-each frameset will contain 10 cache frames.
+<ul>
+<li>The default number of cache framesets is 2.</li>
+</ul>
+<ul>
+<li>User can set the number of cache framesets by defining the following property on the RBNB Server command line:</li>
+      <pre><span style="font-family: monospace;">          -Dnumframesets=&lt;positive integer&gt;</span></pre>
+</ul>
+<ul>
+<li>If "<span style="font-family: monospace;">-Dnumframesets=0</span>" is defined on the RBNB Server command line, the number of cache framesets will equal the square root of the number of cache frames.</li>
+</ul>
 <h2>V2.5 to V2.6B1 Changes</h2>
 V2.6B1 is a beta release
 <h3>WebTurbine</h3>
@@ -235,10 +44,8 @@ the connected server via the "RBNB" servlet, as in:<br>
 <br>
 http://localhost/RBNB<br>
 <br>
-WebTurbine now recognizes If-Modified-Since headers and only returns
-data if it
-has changed. This greatly improves the efficiency of the WebTurbine for
-polling
+WebTurbine now recognizes If-Modified-Since headers and only returns data if it
+has changed.  This greatly improves the efficiency of the WebTurbine for polling
 applications.
 <h3>rbnbServer</h3>
 Fixed a bug if Source archive length was less than cache size, no

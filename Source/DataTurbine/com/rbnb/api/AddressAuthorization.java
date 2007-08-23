@@ -26,11 +26,10 @@ package com.rbnb.api;
  * granted.  If no permissions are specified, then all are granted.  Otherwise
  * only the specific permissions are granted (codes are case-insensitive):
  * <p><ul>
- *    <li><bold>X</bold> - control connections are allowed,</li>
- *    <li><bold>T</bold> - routing connections are allowed,</li>
- *    <li><bold>P</bold> - plug-in connections are allowed,</li>
- *    <li><bold>R</bold> - sink connections are allowed,</li>
- *    <li><bold>W</bold> - source connections are allowed.</li>
+ *    <li><bold>C</bold> - control connections are allowed,</li>
+ *    <li><bold>K</bold> - sink connections are allowed,</li>
+ *    <li><bold>R</bold> - routing connections are allowed,</li>
+ *    <li><bold>S</bold> - source connections are allowed.</li>
  * </ul><p>
  * It is not possible to deny specific permissions - simply do not grant them.
  * <p>
@@ -49,8 +48,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  WHF      Updated documentation, changed output to facilitate
- *                      parsing.
  * 09/29/2004  JPW	In order to compile under J# (which is only compatable
  *			with Java 1.1.4), support for HTTPS has been disabled
  *			for reading the address authorization file.
@@ -122,7 +119,7 @@ final class AddressAuthorization {
     AddressAuthorization()
 	throws java.lang.Exception
     {
-	this((String) null);
+	this(null);
 	if (Wildcard == null) {
 	    Wildcard = new com.rbnb.utility.Wildcards("*");
 	}
@@ -166,34 +163,6 @@ final class AddressAuthorization {
 	}
    }
 
-    /**
-     * Class constructor to build an <code>AddressAuthorization</code> object
-     * by reading an input stream.
-     * <p>
-     *
-     * @author WHF
-     *
-     * @param stream  The input stream to parse.
-     * @exception java.io.IOException if an I/O error occurs.
-     * @since V3.0
-     * @version 07/23/2007
-     */
-
-    /*
-     *
-     *   Date      By	Description
-     * MM/DD/YYYY
-     * ----------  --	-----------
-     * 07/23/2007  WHF	Created.
-     *
-     */
-    AddressAuthorization(java.io.InputStream stream)
-	throws java.io.IOException, Exception
-    {
-	this((String) null);
-	readFromStream(stream);
-    }
-   
     /**
      * Adds an address to the ALLOW list.
      * <p>
@@ -581,7 +550,6 @@ final class AddressAuthorization {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 07/23/2007  WHF  Now depends on readFromStream.
      * 09/29/2004  JPW  In order to compile under J# (which is only
      *			compatable with Java 1.1.4), support for HTTPS
      *			has been disabled.  Throw an exception if the
@@ -644,38 +612,8 @@ final class AddressAuthorization {
 	// Connect and set up a line number reader so that we can read whole
 	// lines.
 	urlCon.connect();
-	readFromStream(urlCon.getInputStream());
-    }
-    
-    /**
-     * Reads the list of allowed/denied addresses from an InputStream.
-     * <p>
-     * @author WHF
-     *
-     * @param stream   The input stream to parse from.
-     * @exception java.io.IOException if an I/O error occurs.
-     * @since V3.0
-     * @version 07/27/2007
-     */
-
-    /*
-     *
-     *   Date      By	Description
-     * MM/DD/YYYY
-     * ----------  --	-----------
-     * 07/23/2007  WHF  Now depends on readFromStream.
-     * 09/29/2004  JPW  In order to compile under J# (which is only
-     *			compatable with Java 1.1.4), support for HTTPS
-     *			has been disabled.  Throw an exception if the
-     *			protocol is HTTPS
-     * 04/28/2004  INB	Create <code>AddressPermissions</code> objects.
-     * 10/11/2002  INB	Created.
-     *
-     */
-    private final void readFromStream(java.io.InputStream is)
-    	throws java.io.IOException, Exception
-    {
-	java.io.InputStreamReader isRead = new java.io.InputStreamReader(is);
+	java.io.InputStreamReader isRead = new java.io.InputStreamReader
+	    (urlCon.getInputStream());
 	java.io.LineNumberReader lRead = new java.io.LineNumberReader(isRead);
 	String line,
 	       token;
@@ -740,7 +678,7 @@ final class AddressAuthorization {
 
 	lRead.close();	
 	isRead.close();
-    }	
+    }
 
     /**
      * Removes an address from the ALLOW list.
@@ -842,24 +780,16 @@ final class AddressAuthorization {
      *
      */
     public final String toString() {
-	StringBuffer sb = new StringBuffer("# AddressAuthorization: \n");
+	StringBuffer sb = new StringBuffer("AddressAuthorization: ");
 	Object[] element;
 
 	if ((allow != null) && (allow.size() > 0)) {
-	    sb.append("ALLOW ");
-	    //sb.append(allow.toString());
-	    for (int ii = 0; ii < allow.size(); ++ii) {
-		sb.append(allow.elementAt(ii));
-		sb.append(' ');
-	    }
+	    sb.append("ALLOW: ");
+	    sb.append(allow.toString());
 	}
 	if ((deny != null) && (deny.size() > 0)) {
-	    sb.append("DENY ");
-//	    sb.append(deny.toString());
-	    for (int ii = 0; ii < deny.size(); ++ii) {
-		sb.append(deny.elementAt(ii));
-		sb.append(' ');
-	    }
+	    sb.append("DENY: ");
+	    sb.append(deny.toString());
 	}
 
 	return (sb.toString());

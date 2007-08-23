@@ -1244,13 +1244,13 @@ public class Server
 	    System.err.println("  -D <mask>,<level>");
 	    System.err.println("  -F");
 	    System.err.println("  -H <archive home directory>");
-	    System.err.println("  -l [<log period (sec)>]" +
+	    System.err.println("  -l [<log period (millis)>]" +
 			       "[,<log cache frames>]" +
 			       "[,[<log cache frames>]" +
 			       "[,[<log archive frames>]" +
 			       "[,[<log archive mode>]]]]");
 	    System.err.println("  -L");
-	    System.err.println("  -m [<metrics period (sec)>]" +
+	    System.err.println("  -m [<metrics period (millis)>]" +
 			       "[,[<metrics cache frames>]" +
 			       "[,[<metrics archive frames>]" +
 			       "[,[<metrics archive mode>]]]]");

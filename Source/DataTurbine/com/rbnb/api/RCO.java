@@ -50,7 +50,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	----------
- * 2007/07/23  WHF      Implemented Get/SetAddressAuthorization command support.
  * 08/12/2004  EMF      Added debug logging to login method.
  * 08/05/2004  INB	Added documentation.
  * 05/27/2004  INB	Don't log EOF exceptions.
@@ -1642,6 +1641,7 @@ abstract class RCO
 	       java.lang.InterruptedException
     {
 	Object[] values;
+
 	try {
 	    if (getTerminateRequested()) {
 		return (false);
@@ -1710,27 +1710,6 @@ abstract class RCO
 
 	    } else if (messageI instanceof ClearCache) {
 		clearCache((ClearCache) messageI);
-		
-	    } else if (messageI instanceof GetAddressAuthorization) {
-		String auth;
-		try {
-		    auth = ((RBNB) getServerHandler()).getAddressHandler()
-		    		.getAuthorization().toString();
-		} catch (Exception e) {
-		    auth = "ALLOW *";
-		}
-		send(new DataBlock(auth, 1, auth.length()));
-
-	    } else if (messageI instanceof SetAddressAuthorization) {
-		try {
-		    String auth = ((SetAddressAuthorization) messageI)
-		    		.getAuthorization();
-		    ((RBNB) getServerHandler()).getAddressHandler()
-			    .setAuthorization(new AddressAuthorization(
-			    new java.io.ByteArrayInputStream(auth.getBytes())
-		    ));
-		} catch (Exception e)
-		{ e.printStackTrace(); throw new com.rbnb.api.SerializeException(e.getMessage()); }
 
 	    } else if (messageI instanceof Reset) {
 		reset((Reset) messageI);

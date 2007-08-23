@@ -22,8 +22,6 @@ limitations under the License.
 	---  History  ---
 	2007/01/15  WHF  Created.
 	2007/04/04  WHF  Added dynamic options.
-	2007/08/15  WHF  Changed the meaning of 'maxSamples' so that it is an 
-		aggregate across all channels.  Then commented it.
 */
 
 import com.rbnb.sapi.ChannelMap;
@@ -52,8 +50,7 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 	
 //*******************************  Accessors  *******************************//
 	/**
-	  * Get the maximum number of samples <!--for all channels--> which will be copied
-	  *   on any request.
+	  * Get the maximum number of samples which will be copied on any request.
 	  *  Larger requests are resampled such that their size is less than this
 	  *   value.
 	  *  <p>The default is 100.
@@ -115,12 +112,6 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 			maxSamples = Integer.parseInt(temp);
 		if ((temp = opts.getProperty("antiAlias")) != null)
 			antiAlias = "true".equals(temp);
-		
-		// 2007/08/15  WHF  maxSamples applies to all channels:
-		// 2007/08/15  WHF  Changed their mind.  Uncomment to re-enable.
-		/*if (fwdData.NumberOfChannels() == 0) return;
-		maxSamples /= fwdData.NumberOfChannels();
-		if (maxSamples < 1) maxSamples = 1; */
 
 		for (int index = 0; index < fwdData.NumberOfChannels(); ++index) {
 			Object data;

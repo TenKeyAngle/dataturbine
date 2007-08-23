@@ -62,9 +62,6 @@
 		<li>udpDestAddr - Internet address to send data packets to when 
 			files are downloaded.  Must be used with</li>
 		<li>udpDestPort - UDP port to send packets to.</li>
-		<li>readTimeout - Time to wait for a resource read, in ms.</li>
-		<li>staggerStartup - Time between the start of consecutive downloads
-			of resources for the first time during process startup, in ms.</li>
 		<li>debug - if set to "true", text is spewed to the 
 		console as files are downloaded.</li></ul></li>
 		
@@ -76,9 +73,6 @@
 		<li><b>destFile</b>.  Parent: resource.  Children: none.  Attributes: none.
 			Contains the filename to use at the destination.  Overrides the
 			destPrefix feature.</li>
-		<li><b>initialSleep</b>.  Parent: resource.  Children: none.  Attributes: none.
-			Specifies a time to wait in millseconds after HttpMonitor startup,
-			before copying the resource for the first time.</li>
 		<li><b>user</b>.  Parent: resource, auth.  Children: none.  Attributes: none.
 			Contains the authorization username.
 		<li><b>password</b>.  Parent: resource, auth.  Children: none.  Attributes: none.
@@ -97,9 +91,6 @@
 			stop.</li>
 		<li><b>auth</b>.  Parent: monitor.  Children: user, password.
 			This provides global authorization for all resources.</li>
-		<li><b>putAuth</b>.  Parent: monitor.  Children: user, password.
-			This provides authorization for all PUTs.  If not used and 
-			&lt;auth&gt; appears it will be used instead.</li>
 	</ul>
 	<p>If neither destPrefix is set globally, nor destFile used on a particular
 	resource, the resource will be copied using its source filename.</p>

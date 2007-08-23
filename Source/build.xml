@@ -1,15 +1,10 @@
 <!-- Name: build.xml
      By:   Ian Brown
      Date: 06/18/2004
-     
+
      Description:
          This file is the primary Ant build file for the RBNB system  It
 	 runs all of the RBNB system builds.
-     
-     Modifications:
-     JPW 08/20/2007: Modify the "compile" and "library" targets to call the
-                     Third_Party targets (since Third_Party has been pulled
-		     out of Source).
 -->
 
 <project name="RBNB" default="distribute-izpack" basedir=".">
@@ -63,6 +58,7 @@
 
  <!-- DataTurbine obfuscation target. -->
  <target name="obfuscate-dataturbine" depends="library-dataturbine">
+ <!-- commented out by pfh - OSS now!
   <mkdir dir="${rbnb.obfuscatedir}" />
   <proguard configuration="${rbnb.obfuscate.configuration}"
             printmapping="${rbnb.obfuscatedir}/mapping.out"
@@ -72,6 +68,7 @@
    <injar name="${rbnb.librarydir}/rbnb.jar" />
    <outjar name="${rbnb.obfuscatedir}/rbnb.jar" />
   </proguard>
+ -->
  </target>
 
  <!-- The following paths are used by reference by Javadoc to locate its source
@@ -148,32 +145,24 @@
  </target>
 
  <!-- Compile all of the applications, but don't build any libraries. -->
- <!-- JPW 08/20/2007: Since Third_Party has been pulled out of Source, -->
- <!--                 need to separately call its "compile" target.    -->
  <target name="compile" depends="documentation">
   <mkdir dir="${rbnb.classesdir}" />
   <subant target="compile">
    <fileset dir="."
 	    includes="*/build.xml"
             excludes="DataTurbine/build.xml,WebTurbine/build.xml" />
-   <fileset dir=".."
-	    includes="Third_Party/build.xml" />
    <fileset dir="."
             includes="WebTurbine/build.xml" />
   </subant>
  </target>
 
- <!-- Compile and make libraries for all of the applications.          -->
- <!-- JPW 08/20/2007: Since Third_Party has been pulled out of Source, -->
- <!--                 need to separately call its "library" target.    -->
+ <!-- Compile and make libraries for all of the applications. -->
  <target name="library" depends="documentation">
   <mkdir dir="${rbnb.librarydir}" />
   <subant target="library">
    <fileset dir="."
 	    includes="*/build.xml"
             excludes="DataTurbine/build.xml,WebTurbine/build.xml" />
-   <fileset dir=".."
-	    includes="Third_Party/build.xml" />
    <fileset dir="."
             includes="WebTurbine/build.xml" />
   </subant>

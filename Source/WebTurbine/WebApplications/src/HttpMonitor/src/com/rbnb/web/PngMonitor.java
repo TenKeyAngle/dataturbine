@@ -21,8 +21,6 @@ limitations under the License.
 	
 	***  History  ***
 	2007/06/25  WHF  Created.
-	2007/07/19  WHF  Defaults to HttpMonitor if the PNG time cannot be
-			extracted.
 */
 
 package com.rbnb.web;
@@ -79,7 +77,6 @@ public abstract class PngMonitor extends HttpMonitor
 				return super.getDestination();
 			}
 			URL dest = super.getDestination();
-			if (time == null) return dest;
 			String newQuery = "?t=" + time;
 			String dQuery = dest.getQuery();
 			if (dQuery != null) newQuery += "&" + dQuery;
@@ -100,21 +97,17 @@ public abstract class PngMonitor extends HttpMonitor
 			javax.imageio.metadata.IIOMetadata meta = imr.getImageMetadata(0);			
 			Node root = meta.getAsTree(meta.getMetadataFormatNames()[0]);			
 			Node text = findChild(findChild(root, "tEXt"), "tEXtEntry");
-			if (text == null) {
-//System.err.println("No tEXtEntry found.");				
-				return null;
-			}
 			// The text is located in the node's attributes, one labeled
 			//  keyword, with a value of ContentTime(Unix), and one labeled
 			//  value, with a value of time in seconds as a string.
 			org.w3c.dom.NamedNodeMap attr = text.getAttributes();
 			if ("ContentTime(Unix)".equals(
 					attr.getNamedItem("keyword").getNodeValue())) {
-//System.err.print("Found time: ");
+System.err.print("Found time: ");
 				result = attr.getNamedItem("value").getNodeValue();
-//System.err.println(result);				
+System.err.println(result);				
 			} else {
-//System.err.println("No time found.");
+System.err.println("No time found.");
 				result = null;
 			}				
 			
@@ -123,7 +116,6 @@ public abstract class PngMonitor extends HttpMonitor
 		
 		private Node findChild(Node parent, String name)
 		{
-			if (parent == null) return null;
 			NodeList nl = parent.getChildNodes();
 			for (int ii = 0; ii < nl.getLength(); ++ii) {
 				Node child = nl.item(ii);

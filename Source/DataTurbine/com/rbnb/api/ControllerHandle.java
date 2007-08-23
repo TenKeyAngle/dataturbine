@@ -34,13 +34,10 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  WHF  Made public so that methods specific to this implemenation
- *     of Controller could be accessed without adding them to the Controller
- *     interface.
  * 05/11/2001  INB	Created.
  *
  */
-public class ControllerHandle
+class ControllerHandle
     extends com.rbnb.api.ClientHandle
     implements com.rbnb.api.Controller,
 	       com.rbnb.api.IOMetricsInterface
@@ -316,34 +313,4 @@ public class ControllerHandle
 
 	return (routerR);
     }
-    
-    public String fetchAddressAuthorization(ServerInterface si)
-	throws com.rbnb.api.AddressException,
-	       com.rbnb.api.SerializeException,
-	       java.io.InterruptedIOException,
-	       java.io.IOException,
-	       java.lang.InterruptedException
-    {
-	getACO().send(new GetAddressAuthorization(si));
-	
-	DataBlock response = (DataBlock) getACO().receive(
-		DataBlock.class,
-		false,
-		true,
-		1000
-	);
-	
-	if (response == null) return null;
-	return ((String) response.getData().get(0));
-    }
-    
-    public void sendAddressAuthorization(ServerInterface si, String auth)
-	throws com.rbnb.api.AddressException,
-	       com.rbnb.api.SerializeException,
-	       java.io.InterruptedIOException,
-	       java.io.IOException,
-	       java.lang.InterruptedException
-   {
-       getACO().send(new SetAddressAuthorization(si, auth));
-   }
 }

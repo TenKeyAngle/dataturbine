@@ -100,7 +100,7 @@ import com.rbnb.kml.*;
  *
  * @author John P. Wilson
  *
- * @version 07/23/2007
+ * @version 06/04/2007
  */
 
 /*
@@ -110,12 +110,6 @@ import com.rbnb.kml.*;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  JPW	Add "-u" command line options.  This allows a user to
- *			specify a base URL for fetching Placemark icons.  Thus,
- *			instead of bundling icons with the KML file into a
- *			KMZ which is returned to the client, only a KML is
- *			returned.  The Google Earth client will then separately
- *			fetch the icon files, as specified in the KML.
  * 06/04/2007  JPW	Add Icon Scale menu; scale icons (3D and non-3D)
  *			according to this scale.
  * 05/31/2007  JPW	Add support to display a single 3D airplane (from a
@@ -549,8 +543,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		System.err.println("             the Tomcat server, either version 4 or version 5. This is");
 		System.err.println("             only used in NetworkLinks.  This option isn't used if the user");
 		System.err.println("             specifies consolidated responses (the '-C' command line option).");
-		System.err.println("   -u <base URL for fetching icons>");
-		System.err.println("       NOTE: The base URL must start with \"http://\" or \"https://\"");
 		System.err.println("   -w <Tomcat or TimeDrive server address to use in NetworkLink URLs>");
 		System.err.println("       default: localhost:80");
 		System.err.println("       NOTE: This option isn't used if the user specifies consolidated");
@@ -651,35 +643,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		}
 	    }
 	    //
-	    // JPW 07/23/2007: User can specify a URL for fetching icons
-	    // 'u' Base URL for fetching icons
-	    //
-	    if (ah.checkFlag('u')) {
-		String urlStr = ah.getOption('u');
-		if (urlStr != null) {
-		    // Make sure this starts with "http://" or "https://"
-		    if ( !urlStr.startsWith("http://") &&
-			 !urlStr.startsWith("https://") )
-		    {
-			System.err.println(
-			"WARNING: Illegal \"-u\" argument: " +
-			" didn't start with \"http://\" or \"https://\".");
-		    }
-		    else
-		    {
-			iconsDirectory = urlStr;
-			// Make sure this ends with a '/'
-			if (!iconsDirectory.endsWith("/")) {
-			    iconsDirectory = iconsDirectory + "/";
-			}
-		    }
-		} else {
-		    System.err.println(
-			"WARNING: Null argument to the \"-u\"" +
-			" command line option.");
-		}
-	    }
-	    //
 	    // 'w' WebDAV/Tomcat server address
 	    //
 	    if (ah.checkFlag('w')) {
@@ -726,10 +689,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	        "Tomcat/TimeDrive server address: " + webdavAddress);
 	}
 	System.err.println("RBNB Fetch timeout: " + timeout);
-	if (iconsDirectory.startsWith("http")) {
-	    System.err.println(
-	    	"Base URL for fetching icon files: " + iconsDirectory);
-	}
 	
 	// Read the configuration file
 	try {
@@ -3883,12 +3842,9 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		icon[2]="0";
 	}
 	
-	// JPW 07/23/2007: Add check on "http://" and "https://"
-	if ( (icon[0] != null)                &&
-	     (!iconsUsed.contains(icon[0]))   &&
-	     (!icon[0].startsWith("root"))    &&
-	     (!icon[0].startsWith("http://")) &&
-	     (!icon[0].startsWith("https://")) )
+	if ( (icon[0] != null) &&
+	     (!iconsUsed.contains(icon[0])) &&
+	     (!icon[0].startsWith("root")) )
 	{
 	    iconsUsed.add(icon[0]);
 	}

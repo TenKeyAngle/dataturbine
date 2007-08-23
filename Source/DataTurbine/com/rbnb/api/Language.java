@@ -40,7 +40,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  WHF  Added Get/SetAddressAuthorization.
  * 01/08/2004  INB	Added support for <code>ClearCache</code>.
  * 07/30/2003  INB	Added support for <code>DeleteChannels</code>.
  * 06/11/2003  INB	Added support for <code>RequestOptions</code>.
@@ -94,9 +93,7 @@ class Language
 			COM_USR = 31,
 			COM_RQO = 32,
 			COM_DLC = 33,
-			COM_CLC = 34,
-			COM_GAA = 35,
-			COM_SAA = 36;
+			COM_CLC = 34;
 
     final static String[] COMMANDS = {
 			    "ACK",
@@ -133,9 +130,7 @@ class Language
 			    "USR",
 			    "RQO",
 			    "DLC",
-			    "CLC",
-				"GAA",
-				"SAA"
+			    "CLC"
 			};
 
     // Private fields:
@@ -607,11 +602,6 @@ class Language
 		commandR = COM_STP;
 	    } else if (objectI instanceof Username) {
 		commandR = COM_USR;
-	    } else if (objectI instanceof GetAddressAuthorization) {
-		commandR = COM_GAA;
-	    } else if (objectI instanceof SetAddressAuthorization) {
-		commandR = COM_SAA;
-		
 
 	    } else if (objectI instanceof Rmap) {
 		// This case must be last because a lot of the other classes
@@ -1379,14 +1369,6 @@ class Language
 
 	case COM_USR:
 	    objectR = new Username(isI,disI);
-	    break;
-	    
-	case COM_GAA:
-	    objectR = new GetAddressAuthorization(isI, disI);
-	    break;
-	    
-	case COM_SAA:
-	    objectR = new SetAddressAuthorization(isI, disI);
 	    break;
 	}
 

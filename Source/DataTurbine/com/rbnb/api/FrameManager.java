@@ -1266,12 +1266,11 @@ abstract class FrameManager
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Reset the private tag.
      * 10/17/2003  INB	Took off the private tag.
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setDoor(Door doorI) {
+    final void setDoor(Door doorI) {
 	door = doorI;
     }
 
