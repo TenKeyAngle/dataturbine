@@ -1060,9 +1060,7 @@ final class Archive
                   }
 
 		} catch (java.lang.Exception e) {
-//EMF 7/26/07: temporary test - do not latch; recover only bad filesets not
-//             all subsequent ones
-                  //forceDeep=true;
+                  forceDeep=true;
                   try {
                     String dir=fs.getArchiveDirectory()+Archive.SEPARATOR;
                     System.err.println("\nRecovering "+dir);

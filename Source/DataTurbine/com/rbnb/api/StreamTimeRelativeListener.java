@@ -98,24 +98,16 @@ package com.rbnb.api;
  * @see com.rbnb.api.StreamServerListener
  * @see com.rbnb.api.StreamRequestHandler
  * @since V2.2
- * @version 03/13/2007
+ * @version 04/19/2005
  */
 
 /*
- * Copyright 2003, 2004, 2005, 2007 Creare Inc.
+ * Copyright 2003, 2004, 2005 Creare Inc.
  * All Rights Reserved
  *
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 03/13/2007  JPW	Make a change in createWorking():
- *			For subscription to oldest, if there is no Trange in
- *			the extracted DataRequest, wait for data to show up.
- *			This fixes a bug when a subscription by time to oldest
- *			starts up before any data is in the Source, and where
- *			there are registered channels in the Source.  In this
- *			case, a DataRequest was extracted, but it didn't have a
- *			start time.
  * 04/19/2005  JPW	Made change in createWorking():
  *                      If Subscribing by time and the request start time is
  *                      zero, then adjust the request start time to ensure
@@ -302,7 +294,7 @@ final class StreamTimeRelativeListener
      * @exception java.lang.InterruptedException
      *		  thrown if this operation is interrupted.
      * @since V2.2
-     * @version 03/13/2007
+     * @version 04/19/2005
      */
 
     /*
@@ -310,13 +302,6 @@ final class StreamTimeRelativeListener
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 03/13/2007  JPW	For subscription to oldest, if there is no Trange in
-     *			the extracted DataRequest, wait for data to show up.
-     *			This fixes a bug when a subscription by time to oldest
-     *			starts up before any data is in the Source, and where
-     *			there are registered channels in the Source.  In this
-     *			case, a DataRequest was extracted, but it didn't have a
-     *			start time.
      * 04/19/2005  JPW	If Subscribing by time and the request start time is
      *                      zero, then adjust the request start time to ensure
      *                      that an appropriate first frame is sent to the
@@ -385,29 +370,19 @@ System.err.println(
 		}
 	    }
 	    
-	    // JPW 03/13/2007: Add bExtractAgain
-	    boolean bExtractAgain = false;
 	    Rmap match;
 	    do {
 		match = ((Rmap) getSource()).extractRmap(request,true);
-		// System.err.println(
-		//     "createWorking(): return from extractRmap(): match:\n" +
-		//     match);
-		
-		// JPW 03/13/2007: Add bExtractAgain; add a check if the
-		//                 DataRequest is doing a time-based subscribe
-		//                 to oldest but Trange in match is null
-		bExtractAgain =
-		    ( (match == null)                ||
-		      (match instanceof EndOfStream) ||
-		      ( (request != null)                                   &&
-		        (request.getReference() == DataRequest.OLDEST)      &&
-		        (request.getNrepetitions() == DataRequest.INFINITE) &&
-		        (match.getChildAt(0).getTrange() == null) ) );
-		
-		// JPW 03/13/2007: Use bExtractAgain
-		// if ((match == null) || (match instanceof EndOfStream)) {
-		if (bExtractAgain) {
+
+/*
+ * JPW debug print
+System.err.println(
+"StreamTimeRelList.createWorking(): return from extractRmap(): match:\n" +
+match);
+ *
+*/
+
+		if ((match == null) || (match instanceof EndOfStream)) {
 		    if (request.getNrepetitions() == 1) {
 			return;
 		    }
@@ -427,7 +402,7 @@ System.err.println(
 		    waitToPickup();
 		    setNeedWait(false);
 		}
-	    } while (bExtractAgain);  // JPW 03/13/2007: Use bExtract again instead of "((match == null) || (match instanceof EndOfStream));"
+	    } while ((match == null) || (match instanceof EndOfStream));
 
 //System.err.println("StreamTimeRelList.createWorking(): before call to updateReference(): trRequest:\n" + trRequest);
 
@@ -681,11 +656,11 @@ System.err.println(
 	    // If we got a request to actually try, then do so now.
 	    requests = workRequests.keys();
 
-// System.err.println("StreamTimeRelList.process(): fullRequest:\n" + fullRequest);
+//System.err.println("StreamTimeRelList.process(): fullRequest:\n" + fullRequest);
 
 	    match = ((Rmap) getSource()).extractRmap(fullRequest,true);
 
-// System.err.println("StreamTimeRelList.process(): match:\n" + match);
+//System.err.println("StreamTimeRelList.process(): match:\n" + match);
 
 	    if (match == null) {
 		// If we don't get a request, then we've run off the

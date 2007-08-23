@@ -166,8 +166,7 @@ final class FrameSet
     private long regHeaderOffset = -1;
 
     //EMF 6/19/06
-    // 2007/08/06  WHF  Since not currently used, removed to save memory.
-//    private DataArray da = null;
+    private DataArray da = null;
 
     // Private class constants:
     /*private*/ final static String[] ARCHIVE_PARAMETERS = {
@@ -576,7 +575,7 @@ final class FrameSet
 //e.printStackTrace();
 
         //EMF 6/19/06: force new DataArray
-        //da = null;
+        da = null;
 
 	// If there is an <code>Archive</code>, then write this
 	// <code>FrameSet</code> to it.

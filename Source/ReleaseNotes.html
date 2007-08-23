@@ -6,46 +6,12 @@
   <meta name="Author" content="Matt Miller">
   <meta name="GENERATOR"
  content="Mozilla/4.79 [en] (X11; U; Linux 2.4.9-e.3smp i686) [Netscape]">
-  <title>RBNB Release Notes</title>
+  <title>RBNB V2 Release Notes</title>
 </head>
 <body>
-<h1>RBNB V3.1 Release Notes</h1>
-<h2>V3.0 to V3.1B1 Changes</h2>
-Third_Party directory has been pulled out of Source directory; build files have been adjusted as appropriate. This is consistant with the folder structure at NEESforge and makes sense since the content of Third_Party isn't part of the RBNB open source.
-<h3>rbnbServer</h3>
-<ul>
-	<li>Some debug features of Locks and Doors are conditional, using the 
-		system property com.rbnb.api.Door.debug.  Set this to "true" to 
-		allow debug.  This reduces memory consumption in some cases by 30-40%.
-	</li>
-</ul>
-<h1>RBNB V3.0 Release Notes</h1>
+<h1>
+RBNB V3.0 Release Notes</h1>
 This release of the RBNB system contains the following changes:<br>
-<h2>V3.0 Production</h2>
-<li>Code is frozen as a stable production release.</li>
-<h2>V3.0B4 to V3.0B5 Changes</h2>
-<li>Both "push" and "pull" mirrors now have reconnect logic</li>
-<li>Added limited support for displaying 3D icons (".dae" models) to TrackKMLPlugIn.  An "Icon Scale" combo box has been added to the GUI which allows the user to specify the scale for both 2D and 3D icons.</li>
-<h2>V3.0B3 to V3.0B4 Changes</h2>
-<li>RBNBPlot's font size can be specified with the java debug flag -Dplot.fontsize=N</li>
-<li>"Pull" mirrors will automatically reconnect if the network link goes down.  This is a beta test change, with "push" mirrors to follow in a future release.</li>
-<li>Parameters targeted to specific plugins can now be specified via both the URL "munge" interface and the API.  
-The URL syntax is "?pio=plug-in-name,key1=value1,...,keyn=valuen".
-The API interface is ChannelMap.AddPlugInOption()</li>
-<h2>V3.0B2 to V3.0B3 Changes</h2>
-<li>Fixed bug in ResamplePlugin so it now handles multiple channels per request
-<h2>V3.0B1 to V3.0B2 Changes</h2>
-<h3>rbnbServer</h3>
-<ul>
-  <li>Plugins now properly handle "Monitor" mode by passing through source frames consistent with how a direct (non-plugin) connection works
-  <li>Mirrors forward registration metadata (also known as "User Info").
-  <li>Subscribe to oldest and Mirror from oldest bug fix in the case where the Subscription/Mirror is set up before data is in the Source and the Source has registered channels.
-  <li>Tweeks to server thread-locking logic should make it less likely for certain rare but annoying thread-lockup problems to happen
-</ul>
-<h3>Developer API</h3>
-<ul>
-  <li>When a user registers channels in a Source, it is now allowed to have a mix of channels with and without registration metadata (also known as "User Info").
-</ul>
 <h2>V2.6 to V3.0B1 Changes</h2>
 V3.0B1 is the first beta release of V3 RBNB.  It is identical to
 V2.6 except that it is being released under the Apache 2.0 Open Source

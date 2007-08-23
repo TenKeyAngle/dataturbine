@@ -19,6 +19,7 @@ package com.rbnb.plot;
 
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -254,10 +255,6 @@ public class JChannelDialog extends JFrame
 	// Create the JTree
 	rootNode = new DefaultMutableTreeNode("ChannelTree");
 	tree = new JTree(rootNode);
-        //EMF 4/11/07: use Environment font so size can be changed
-	tree.setFont(Environment.FONT10);
-        java.awt.FontMetrics fm=tree.getFontMetrics(Environment.FONT10);
-        tree.setRowHeight(fm.getHeight());
 	treeModel = (DefaultTreeModel)tree.getModel();
 	// Don't display the root node
 	tree.setRootVisible(false);
@@ -328,10 +325,8 @@ public class JChannelDialog extends JFrame
 	// allButton = new JButton("All");
 	// allButton.addActionListener(this);
 	resetButton = new JButton("Reset");
-	resetButton.setFont(Environment.FONT12);
 	resetButton.addActionListener(this);
 	refreshButton = new JButton("Refresh");
-	refreshButton.setFont(Environment.FONT12);
 	refreshButton.addActionListener(this);
 	JPanel buttonPanel = new JPanel(new GridLayout(1,2,15,0));
         buttonPanel.add(resetButton);

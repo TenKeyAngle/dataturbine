@@ -38,8 +38,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 08/03/2007  WHF	Made 'locations' debug object optional and final.
- *                      Made some methods private that didn't need to be public.
  * 11/17/2003  INB	Added <code>clear</code>.  Don't clear the thread field
  *			when unlocking.  Made the <code>count</code> externally
  *			accessible.
@@ -68,7 +66,7 @@ final class Lock
      * @since V2.0
      * @version 11/17/2003
      */
-    private long count = 0;
+    long count = 0;
 
     /**
      * the <code>Door</code> that this <code>Lock</code> is on.
@@ -89,8 +87,8 @@ final class Lock
      *
      * @since V2.2
      * @version 11/12/2003
-     */                                // 2007/08/03  WHF
-    private final java.util.Vector locations; //new java.util.Vector();
+     */
+    private java.util.Vector locations = new java.util.Vector();
 
     /**
      * the list of pending locks.
@@ -135,9 +133,6 @@ final class Lock
     Lock() {
 	super();
 	setThread(Thread.currentThread());
-	// 2007/08/03  WHF
-	if (Door.isDebug()) locations = new java.util.Vector();
-	else locations = null;
     }
 
     /**
@@ -163,9 +158,6 @@ final class Lock
     Lock(Door doorI) {
 	super();
 	setDoor(doorI);
-	// 2007/08/03  WHF
-	if (Door.isDebug()) locations = new java.util.Vector();
-	else locations = null;
     }
 
     /**
@@ -232,11 +224,11 @@ final class Lock
 				     boolean checkPendingI,
 				     boolean havePendingI)
     {
-	return (checkPendingI &&
+	return ((checkPendingI &&
 		 (havePendingI ?
 		  !pending.containsKey(Thread.currentThread()) :
 		  !pending.isEmpty())) ||
-		((count > 0) && (getThread() != null) && getThread().isAlive());
+		((count > 0) && (getThread() != null) && getThread().isAlive()));
     }
 
     /**
@@ -259,8 +251,7 @@ final class Lock
      *
      */
     public final void clear() {
-	if (locations != null)
-	    locations.removeAllElements();
+	locations.removeAllElements();
 	count = 0;
 	setThread(null);
     }
@@ -359,7 +350,7 @@ final class Lock
      * 02/21/2001  INB	Created.
      *
      */
-    private final Thread getThread() {
+    final Thread getThread() {
 	return (thread);
     }
 
@@ -396,20 +387,11 @@ final class Lock
 	throws java.lang.InterruptedException
     {
 	long lastAt = System.currentTimeMillis();
-	long firstAt = lastAt; // MJM
 	long nowAt;
 
 	while ((getThread() != Thread.currentThread()) &&
 	       check(locationI,checkPendingI,havePendingI)) {
 	    wait(TimerPeriod.NORMAL_WAIT);
-
-// MJM 2/20/07:  grope to break deadlock bug
-	    if ( (System.currentTimeMillis() - firstAt) >=
-		2*TimerPeriod.LOCK_WAIT) {
-		  System.err.println("Cannot Grab Lock!!!  Forcibly clearing other locks!");
-		  clear();
-		  break;
-	    }
 
 	    if ((nowAt = System.currentTimeMillis()) - lastAt >=
 		TimerPeriod.LOCK_WAIT) {
@@ -473,8 +455,7 @@ final class Lock
 	}
 
 	setThread(Thread.currentThread());
-	if (locations != null)
-	    locations.addElement(locationI);
+	locations.addElement(locationI);
 	++count;
 	if ((count == 1) && (getThread() instanceof ThreadWithLocks)) {
 	    ((ThreadWithLocks) getThread()).addLock(this);
@@ -509,8 +490,7 @@ final class Lock
 
 	if (locations != null) {
 	    locations.removeAllElements();
-	    // 2007/08/06  WHF  locations now final.
-//	    locations = null;
+	    locations = null;
 	}
 
 	if (pending != null) {
@@ -528,15 +508,16 @@ final class Lock
     /**
      * Releases this <code>Lock</code>.
      * <p>
-     * This method calls unlock(), then sets the thread to null if the lock
-     *  count is zero.
+     * Releasing a <code>Lock</code> is the same as unlocking it. This
+     * method basically provides symmetry with the <code>grab</code>
+     * method.
      * <p>
      *
      * @author Ian Brown
      *
      * @see #grab(String,boolean,boolean)
      * @since V2.0
-     * @version 08/13/2007
+     * @version 11/12/2002
      */
 
     /*
@@ -544,18 +525,12 @@ final class Lock
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/13/2007  WHF  Sets thread to null if count equals zero.
      * 11/12/2003  INB	Updated see also list.
      * 02/21/2001  INB	Created.
      *
      */
-    final synchronized boolean release() {
+    final void release() {
 	unlock();
-	if (count == 0) {
-	    thread = null;
-	    return true;
-	}
-	return false;
     }
 
     /**
@@ -574,7 +549,7 @@ final class Lock
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 11/14/2003  INB	Made package accessible.
+     * 11/14/2003  INB	Msde package accessible.
      * 11/12/2003  INB	Handle <code>Hashtable</code> pending.
      * 03/18/2002  INB	Created.
      *
@@ -630,19 +605,8 @@ final class Lock
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setThread(Thread threadI) {
+    final void setThread(Thread threadI) {
 	thread = threadI;
-    }
-    
-    /**
-      * Performs a thread comparison, the only use of getThread outside this
-      *  class.
-      * @author WHF
-      * @since V3.0
-      * @version 2007/08/06
-      */
-    final boolean threadEquals(Thread t) {
-	return thread == t;
     }
 
     /**
@@ -703,7 +667,6 @@ final class Lock
      */
     public final String toString() {
 	return ("Lock: thread: " + thread +
-		" count: " + count +
 		" Door: " + getDoor().getIdentification() +
 		" Location list: " + locations +
 		" Pending list: " + pending);
@@ -740,7 +703,7 @@ final class Lock
     final synchronized boolean unlock() {
 	if (Thread.currentThread() == getThread()) {
 	    // If the current thread owns the lock, decrement the count.
-	    if (locations != null && locations.size() > 0) {
+	    if (locations.size() > 0) {
 		locations.removeElementAt(locations.size() - 1);
 	    }
 

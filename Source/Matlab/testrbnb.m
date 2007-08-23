@@ -29,9 +29,6 @@ function testrbnb(host)
   testzdnzt  (host);
   teststream (host, 0);
   teststream (host, 1);
-  % JPW 03/14/2007: add teststreamoldest
-  teststreamoldest(host, 0);
-  teststreamoldest(host, 1);
   testarcsub (host);
   testtimesub(host);
   teststdp   (host);

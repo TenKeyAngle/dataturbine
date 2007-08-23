@@ -13,7 +13,6 @@
 	 2006/04/26  WHF  Builds HttpMonitor.
 	 2006/07/13  JPW  No longer copy KMLResources directory; copy
 	                      TrackResources directory.
-	 2007/03/23  WHF  Attempt to use Piccolo as the SAX driver, versus xerces.				
 -->
 
 <project name="WebApplications" default="library" basedir=".">
@@ -67,7 +66,6 @@
 		<mkdir dir="${rbnb.builddir}" />
 		<mkdir dir="${rbnb.classesdir}" />
 		<mkdir dir="${rbnb.waclassesdir}" />
-		<mkdir dir="${rbnb.waclassesdir}/HttpMonitor" />
 		<mkdir dir="${rbnb.wtimageroot}" />
 		<mkdir dir="${rbnb.wtclassesdir}" />
 		<mkdir dir="${rbnb.librarydir}" />
@@ -149,13 +147,11 @@
 		</javac>
 
 		<!-- HttpMonitor: -->
-		<javac destdir="${rbnb.waclassesdir}/HttpMonitor" debug="on"
-				deprecation="off"
+		<javac destdir="${rbnb.waclassesdir}" debug="on" deprecation="on"
 				source="1.4" target="1.4" >
 			<classpath refid = "servletcp" />
 			<src path="src/HttpMonitor/src" />
 			<src path="${rbnb.thirdpartydir}/dav4jSrc" />
-			<src path="${rbnb.thirdpartydir}/piccolo" />
 		</javac>
 		<mkdir dir="${rbnb.walibdir}/webapps/webTurbine/WEB-INF/lib" />
 		<!-- 2007/01/24  WHF  Copied to this area in 'library' task. 
@@ -168,13 +164,11 @@
 		<!-- JPW 06/09/2006: Create HttpMonitor.jar in the standard RBNB lib directory as well -->
 		<jar destfile="${rbnb.librarydir}/HttpMonitor.jar"
 				manifest="src/HttpMonitor/monitorManif.txt">
-			<!-- <fileset dir="${rbnb.waclassesdir}" 
-					includes="com/rbnb/web/**,com/ibm/**" />  -->
-			<fileset dir="${rbnb.waclassesdir}/HttpMonitor" />
+			<fileset dir="${rbnb.waclassesdir}" 
+					includes="com/rbnb/web/**,com/ibm/**" />
 			<!-- 2007/01/24  WHF  Xerces class files moved to 'Third_Party' -->
 			<!-- <fileset dir="src/HttpMonitor/SAX" /> -->
-			<!-- 2007/03/23  WHF  Now use Piccolo instead of Xerces. -->
-			<!-- <fileset dir="${rbnb.thirdpartydir}/xerces" /> -->
+			<fileset dir="${rbnb.thirdpartydir}/xerces" />
 		</jar>
 	</target>
 

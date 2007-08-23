@@ -33,12 +33,6 @@ limitations under the License.
 			clients.	
 	2006/11/07  WHF  Optionally creates a UDP socket and sends datagrams to
 			a specified address.
-	2007/06/20  WHF  Several algorithm changes intended to improve performance
-			under certain scenarios.
-	2007/06/27  WHF  Reset successCount on failure and failCount on success.
-	2007/07/10  WHF  Read timeout on URLConnection.
-	2007/07/30  WHF  Added initialSleep child of <resource>, staggerStartup
-			attribute.
 */
 
 package com.rbnb.web;
@@ -51,7 +45,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.xml.sax.*;
-import org.xml.sax.helpers.XMLReaderFactory;
 
 /**
   * Utility to monitor a list of URLs for changes.  The changed files are 
@@ -61,7 +54,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
   * @author William Finger, Creare Inc.
   * @version 1.3
   */  
-public abstract class HttpMonitor
+public class HttpMonitor
 {
 	/**
 	  * Utility class which manages each resource, including URL, last 
@@ -119,27 +112,7 @@ public abstract class HttpMonitor
 		public void setAuthorization(String value)
 		{ auth = value; }
 		
-		public URL getSource() { return source; }
-		
-		/**
-		  * Can be overridden by subclasses to modify the destination on a
-		  *  per-PUT basis.
-		  */
 		public URL getDestination() { return dest; }
-		
-		/**
-		  * In milliseconds.
-		  */
-		public long getInitialSleep() { return initialSleep; }
-		/**
-		  * Sets the time to wait before downloading a resource for the 
-		  *  first time.  The defualt is zero.
-		  */
-		public void setInitialSleep(long is)
-		{
-			initialSleep = is;
-			nextRequestTime = System.currentTimeMillis() + is;
-		}
 		
 		public long getMinimumInterval() { return minInterval; }
 		
@@ -160,8 +133,7 @@ public abstract class HttpMonitor
 		  */
 		public void reset()
 		{
-			prevLocalDate = prevLastMod = nextRequestTime = delta = 0;
-			successCount = failCount = 0;
+			lastLocalDate = lastServerDate = nextRequestTime = delta = 0;
 			lastModifiedString = null;			
 		}
 		
@@ -186,17 +158,6 @@ public abstract class HttpMonitor
 					source.openConnection();
 			boolean success = false;
 			byte[] ba = null;
-			
-			// Set the read timeout, if the Java version supports it.
-			if (urlConnectionReadTimeoutMethod != null) {
-				try {
-					Object[] args = { new Integer(resourceReadTimeout) }; 
-					urlConnectionReadTimeoutMethod.invoke(
-							srcCon,
-							args
-					);
-				} catch (Throwable t) {}
-			}
 					
 			// Set the If-Modified-Since header if possible.  This signals
 			//  the server to not send the file if we already have the most
@@ -249,6 +210,7 @@ public abstract class HttpMonitor
 			nextRequestTime = guessNextTime(
 					requestTime, success, theirDate, lastMod, expires);
 			if (debug)
+//System.err.println("\tnext copy at "+new java.util.Date(nextRequestTime));
 				printLog(requestTime, getResponse, putResponse, 
 						theirDate, lastMod, expires, nextRequestTime); 
 						
@@ -291,10 +253,7 @@ public abstract class HttpMonitor
 			try {
 				writeToSockets(ba);
 			} catch (Throwable t) { t.printStackTrace(); }
-					
-			// We use getDestination in case we would like to alter
-			//  the destination in successive requests:
-			URL dest = getDestination();
+						
 			if (dest == null) return 0;
 			
 			HttpURLConnection destCon 
@@ -400,73 +359,47 @@ public abstract class HttpMonitor
 		{
 			long updateDelta;
 			
-			if (success) {
-				long thisDelta;
-
-				failCount = 0;
-				if (++successCount == successCountToMin) {
-					successCount = 0;
-					thisDelta = delta = getMinimumInterval();
-				} else if (prevLocalDate != 0)
-					thisDelta = ourNow - prevLocalDate;
-				else thisDelta = getMinimumInterval();
-				
-				if (lastModField != 0 && prevLastMod != 0) {
-					long serverDelta = lastModField - prevLastMod;
+			if (success && lastLocalDate != 0) {
+				/* if (debug) 
+					System.err.println(
+							"Remote age is "+(dateField - lastModField)+" ms.");
+				*/
+				long thisDelta = ourNow - lastLocalDate;
+				if (lastModField != 0 && lastServerDate != 0) {
+					long serverDelta = lastModField - lastServerDate;
+					/* if (debug)
+						System.err.println(" Local delta: "+thisDelta
+								+"   Server delta: "+serverDelta); */
 					thisDelta = (thisDelta + serverDelta) / 2;
 				}
-				prevLastMod = lastModField;
-				thisDelta = boundInterval(thisDelta);
+				lastServerDate = lastModField;
 				if (delta == 0) delta = thisDelta;
-				else //delta = (delta + thisDelta) / 2; // simple exp ave
-					// 2007/06/20  WHF  Use different alphas if up or down:
-					if (thisDelta > delta) delta = (3*delta + thisDelta) / 4;
-					else delta = (delta + 3*thisDelta) / 4;
-				
+				else delta = (delta + thisDelta) / 2; // simple exp ave
+				//if (debug) System.err.println(""+delta+","+thisDelta);				
 				updateDelta = delta*deltaFraction/100; // slightly less
-			} else { // failure
-				successCount = 0;
-				if (failCount + 1 == failCountToMax) {
-					updateDelta = getMaximumInterval();
-				} else {
-					++failCount;
-					updateDelta = getMinimumInterval();
-				}					
+			} else {
+				// Set lastServerDate immediately, for gating purposes.
+				if (success) lastServerDate = lastModField;
+				updateDelta = getMinimumInterval();
 			}
 
-			/* 
 			// This case is fairly unlikely, because it relies on the server
 			//  playing very nicely.
 			if (lastModField != 0 // the current object Date was marked,
 					&& expiresField > lastModField) {// and sensical expiration set
+//System.err.println("LastMod = "+lastModField+"\nExpires = "+expiresField);
 				updateDelta = expiresField - lastModField;
-			} */
-			// 2007/06/26  WHF  Switched to using a delay of expires time
-			//  minus server time to get the file with less latency.
-			if (dateField != 0 && expiresField > dateField) {
-				updateDelta = expiresField - dateField;
 			}
 			
-			if (success) prevLocalDate = ourNow;
-			updateDelta = boundInterval(updateDelta);
+			if (success) lastLocalDate = ourNow;
+//System.err.println("UD = "+updateDelta+"\nMIN = "+getMinimumInterval()+"\nMAX = "+getMaximumInterval());			
+			if (updateDelta > getMaximumInterval())
+				updateDelta = getMaximumInterval();
+			else if (updateDelta < getMinimumInterval())
+				updateDelta = getMinimumInterval();
 
 			return ourNow + updateDelta;
 		}
-
-				
-		/**
-		  * Bounds a value between the minimum and maximum intervals.
-		  * @return the bounded interval.
-		  */
-		protected long boundInterval(long toBound)
-		{
-			if (toBound > getMaximumInterval())
-				toBound = getMaximumInterval();
-			else if (toBound < getMinimumInterval())
-				toBound = getMinimumInterval();
-			
-			return toBound;
-		}			
 		
 		/**
 		  * Keep consistent with printLog().
@@ -537,10 +470,9 @@ public abstract class HttpMonitor
 		  * Authorization header field used for BASIC authentication.
 		  */
 		private String auth;
-		private long prevLocalDate, prevLastMod, nextRequestTime, delta,
-				minInterval, maxInterval, initialSleep;
+		private long lastLocalDate, lastServerDate, nextRequestTime, delta,
+				minInterval, maxInterval;
 		private final java.util.Date logDate = new java.util.Date();
-		private int successCount, failCount;
 				
 		/**
 		  * The bytes from the last read of the resource, or null if the
@@ -562,19 +494,11 @@ public abstract class HttpMonitor
 				try {
 					// Try to instantiate the system default parser:
 					xmlReader
-						= XMLReaderFactory.createXMLReader();
+						= org.xml.sax.helpers.XMLReaderFactory.createXMLReader();
 				} catch (Throwable t) {	
 					// Failed, use the one we packaged:
-					try {
-						xmlReader = XMLReaderFactory.createXMLReader(
-								"com.bluecast.xml.Piccolo"
-						);
-					} catch (Throwable t2) {
-						// Try one we used to package:
-						xmlReader = XMLReaderFactory.createXMLReader(
-								"org.apache.xerces.parsers.SAXParser"
-						);
-					}
+					xmlReader = org.xml.sax.helpers.XMLReaderFactory
+							.createXMLReader("org.apache.xerces.parsers.SAXParser");
 				}						
 System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			}
@@ -592,17 +516,11 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	  * A SAX handler to process the configuration file.
 	  */
 	protected static class ConfigParser extends RootParser
+		
 	{
 		ConfigParser(String fname) throws IOException, SAXException
 		{
 			parse(fname);
-		}
-		
-		ConfigParser(byte[] xmlArray) throws IOException, SAXException
-		{
-			parse(new org.xml.sax.InputSource(
-					new ByteArrayInputStream(xmlArray)
-			));
 		}
 		
 		/**
@@ -663,23 +581,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 							"WARNING: deltaFraction attribute incorrect.");
 					}
 				}
-				if ((temp = attributes.getValue("successCountToMin")) != null) {
-					try {
-						successCountToMin = Integer.parseInt(temp);
-					} catch (NumberFormatException nfe) {
-						System.err.println(
-							"WARNING: successCountToMin attribute incorrect.");
-					}
-				}
-				if ((temp = attributes.getValue("failCountToMax")) != null) {
-					try {
-						failCountToMax = Integer.parseInt(temp);
-					} catch (NumberFormatException nfe) {
-						System.err.println(
-							"WARNING: failCountToMax attribute incorrect.");
-					}
-				}
-						
 				/* 2006/11/07  WHF  destURLPath no long required.
 				if ((destURLPath = attributes.getValue("destURLPath")) == null)
 					System.err.println("ERROR: destURLPath attribute missing.");
@@ -690,14 +591,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 					mkcolQuery = attributes.getValue("mkcolQuery");
 					if (mkcolQuery == null) mkcolQuery = "";
 					destPrefix = attributes.getValue("destPrefix");
-				}
-				
-				if ((temp = attributes.getValue("staggerStartup")) != null) {
-					stagger = Long.parseLong(temp);
-				}
-				
-				if ((temp = attributes.getValue("readTimeout")) != null) {
-					resourceReadTimeout = Integer.parseInt(temp);
 				}
 				
 				if ((temp = attributes.getValue("debug")) != null) {
@@ -727,22 +620,12 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			} else if ("resource".equals(qName)) {
 				clear();
 				inResource = true;				
-			} else if ("configMonitor".equals(qName)) {
-				clear();
-				inResource = true;
-				if (configQueue.size() > 0) {
-					throw new SAXException(
-							"Only one configuration node allowed.");
-				}
 			} else if ("gate".equals(qName)) {
 				if (inResource) throw new SAXException(
 						"<gate> cannot be a child of <resource>.");
 				clear();
 				inGate = true;
-			} else if ("url".equals(qName) && !inResource && !inGate) {
-				// this can be a top level tag for backward compatability.
-				clear();
-			}
+			}				
 		}
 		
 		public void characters(char[] ch, int start, int length)
@@ -770,19 +653,10 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 							"ERROR: resource requires url subtag.");
 				}
 				makeResource(resourceQueue);
-			} else if ("configMonitor".equals(qName)) {
-				inResource = false;
-				if (srcUrl == null) {
-					throw new SAXException(
-							"ERROR: configMonitor requires url subtag.");
-				}
-				makeResource(configQueue);
 			} else if ("user".equals(qName))
 				user = sbuffer.toString();
 			else if ("password".equals(qName))
 				password = sbuffer.toString();
-			else if ("initialSleep".equals(qName) && (inResource || inGate))
-				iSleep = Long.parseLong(sbuffer.toString());
 			else if ("minimumInterval".equals(qName) && (inResource || inGate))
 				minInterval = Long.parseLong(sbuffer.toString());
 			else if ("maximumInterval".equals(qName) && (inResource || inGate))
@@ -800,21 +674,12 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 				defaultUser = user;
 				defaultPassword = password;
 				
-				if (putAuth == null)
-					setPutAuth(defaultUser, defaultPassword);
-			} else if ("putAuth".equals(qName) && !(inResource || inGate)) {
-				// Global auth for all puts:
-				setPutAuth(user, password);
+				// Create a resource to make the authorization for puts:
+				Resource r = new Resource(null, null);
+				r.setAuthorization(defaultUser, defaultPassword);
+				putAuth = r.getAuthorization();
 			}
 		}
-		
-		public void endDocument() throws SAXException
-		{
-			//Sort the queues, to support initialSleep:
-			Collections.sort(resourceQueue);
-			Collections.sort(gateQueue);
-			Collections.sort(configQueue);
-		}			
 		
 		public void error(SAXParseException e)
 		{ System.err.println("Parse error: "); e.printStackTrace(); }
@@ -828,7 +693,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 		{ 
 			srcUrl = null; 
 			destFile = user = password = null;
-			minInterval = maxInterval = iSleep = 0L;
+			minInterval = maxInterval = 0L;
 		}
 	
 		protected final StringBuffer getCharacters() { return sbuffer; }
@@ -845,26 +710,13 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 				res.setMinimumInterval(minInterval);
 			if (maxInterval != 0L)
 				res.setMaximumInterval(maxInterval);
-			if (iSleep != 0L) {
-				res.setInitialSleep(iSleep);
-				nextSleep = iSleep + stagger;
-			} else if (stagger != 0L) {
-				res.setInitialSleep(nextSleep);
-				nextSleep += stagger;
-			}
 		}			
 		
 	//******************************  Data  **********************************//
 		private final StringBuffer sbuffer = new StringBuffer();		
 		private URL srcUrl;
 		private String destFile, user, password;
-		private long minInterval, maxInterval, iSleep, nextSleep = 0;
-		/**
-		  * An interval to add between consecutive resources loading for the
-		  *  first time during startup.
-		  */
-		private long stagger = 0L;
-		
+		private long minInterval, maxInterval;
 		private boolean inResource = false, inGate = false;
 	} // end class ConfigParser
 
@@ -909,8 +761,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			}
 		}
 			
-		Resource res = // new Resource(srcUrl,destUrl);
-				createResource(srcUrl, destUrl);
+		Resource res = new Resource(srcUrl,destUrl);
 		int resIndex = queue.indexOf(res);
 		if (resIndex == -1)
 			queue.add(0, res);  // add new resource to front of list
@@ -919,26 +770,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			res = (Resource) queue.get(resIndex);
 		
 		return res;
-	}
-	
-	/**
-	  * Does actual resource creation.  Uses property resourceClass, 
-	  *   if available.
-	  */
-	private static Resource createResource(URL src, URL dest)
-	{
-		try {
-			if (resourceClass != null) {
-				Object[] args = {src, dest};
-				return (Resource) resourceClass.getDeclaredConstructors()[0]
-						.newInstance(args);
-			}
-		} catch (Exception e) {
-			System.err.println("Could not form resource object:");
-			e.printStackTrace();
-		}
-		
-		return new Resource(src, dest);
 	}
 
 	private static void makeWebDavDestination()
@@ -1007,55 +838,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 		} catch (Exception e) { e.printStackTrace(); }
 	}
 	
-	private static void reconfigure(byte[] newConf) 
-		throws IOException, SAXException
-	{
-		// Shut down everything:
-		if (serverSocketThread != null) {
-			stopSignal = true;
-			try {
-				serverSocket.close();
-				serverSocketThread.join();
-			} catch (Throwable t) {}
-			serverSocket = null;
-			serverSocketThread = null;
-			tcpListenPort = 0;
-			for (Iterator iter = sockets.iterator(); iter.hasNext(); ) {
-				((Socket) iter.next()).close();
-			}
-			sockets.clear();
-		}
-		
-		if (udpSocket != null) {
-			udpSocket.close();
-			udpSocket = null;
-			udpPacket = null;
-		}
-		
-		// Clear resource queues:
-		resourceQueue.clear();
-		gateQueue.clear();
-		Resource oldConf = (Resource) configQueue.get(0);
-		configQueue.clear();
-		
-		new ConfigParser(newConf);
-		
-		// Compare the new conf to the old conf:
-		if (!configQueue.isEmpty()) {
-			Resource currConf = (Resource) configQueue.get(0);
-			if (currConf.getSource().equals(oldConf.getSource())) {
-				// URL same, set time based on old:
-				currConf.nextRequestTime = oldConf.nextRequestTime;
-				// Preserve last modified:
-				currConf.lastModifiedString = oldConf.lastModifiedString;
-			}
-		}
-		
-		makeDestination();
-		
-		// Returning should drop us back into the load resources loop.
-	}
-	
 	/** 
 	  * Creates the destination collection URL using MKCOL. 
 	  */
@@ -1069,27 +851,20 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			// Start up server socket, if desired:
 			if (tcpListenPort != 0) {
 				serverSocket = new ServerSocket(tcpListenPort);
-				serverSocketThread = new Thread(new Runnable() {
-					public void run()
-					{
-						stopSignal = false;
-						
-						int errorCount = 0, ERROR_MAX = 5;
-						while (!stopSignal && errorCount < ERROR_MAX) {
-							try {
-								Socket s = serverSocket.accept();
-								synchronized (sockets) { sockets.add(s); }
-							} catch (IOException ioe) {
-								if (!stopSignal) {
-									ioe.printStackTrace();
-									++errorCount;
-								}
-							}
+				Thread thread = new Thread(new Runnable() { public void run() {
+					int errorCount = 0, ERROR_MAX = 5;
+					while (errorCount < ERROR_MAX) {
+						try {
+							Socket s = serverSocket.accept();
+							synchronized (sockets) { sockets.add(s); }
+						} catch (IOException ioe) {
+							ioe.printStackTrace();
+							++errorCount;
 						}
 					}
-				}, "ServerSocket Listener");
-				serverSocketThread.setDaemon(true);
-				serverSocketThread.start();
+				}}, "ServerSocket Listener");
+				thread.setDaemon(true);
+				thread.start();
 			}
 		} catch (Exception e) { e.printStackTrace(); }
 		
@@ -1116,7 +891,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 			try {
 				gate.get(false); // don't write gate anywhere
 				// Check to see if the gate is fresh enough:
-				if (now - gate.prevLastMod < gate.getMinimumInterval()) {
+				if (now - gate.lastServerDate < gate.getMinimumInterval()) {
 					gateExpiration = now + gate.getMinimumInterval();
 					return true;
 				}
@@ -1136,27 +911,7 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	protected static void loadResources() throws InterruptedException
 	{
 		Resource.printLogHeader();
-		while (loadNextResource(resourceQueue, true) != null) {
-			// Check configuration:
-			if (!configQueue.isEmpty()) {
-				Resource conf = (Resource) configQueue.get(0);
-				if (conf.nextRequestTime <= System.currentTimeMillis()) {
-					// Expired, see if new:
-					try {
-						byte[] newConf = conf.get(false);
-						if (newConf != null) reconfigure(newConf);
-					} catch (Exception e) {
-						System.err.println(
-								"WARNING: Could not load configuration from "
-								+ conf.getSource() + ":"
-						);
-						e.printStackTrace();
-						conf.nextRequestTime = System.currentTimeMillis() 
-								+ conf.getMinimumInterval();
-					}						
-				}
-			}
-		}
+		while (loadNextResource(resourceQueue, true) != null) ;
 	}
 	
 	/**
@@ -1202,14 +957,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	
 	protected static java.util.List getResourceQueue() { return resourceQueue; }
 	
-	protected static void setPutAuth(String user, String pword)
-	{
-		// Create a resource to make the authorization for puts:
-		Resource r = new Resource(null, null);
-		r.setAuthorization(user, pword);
-		putAuth = r.getAuthorization();
-	}				
-	
 	/**
 	  * HttpMonitor main.  The main function takes one argument, the 
 	  *   XML file to use for configuration.
@@ -1244,10 +991,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	  */
 	private final static ArrayList resourceQueue = new ArrayList(),
 	/**
-	  * Stores one or zero URL's to monitor for configuration changes.
-	  */
-			configQueue = new ArrayList(),
-	/**
 	  * Gates, which must have new data in order to allow execution to proceed:
 	  */
 			gateQueue = new ArrayList(),
@@ -1275,17 +1018,6 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	private static ServerSocket serverSocket;
 	
 	/**
-	  * The thread which monitors the server socket, waiting for connections.
-	  */
-	private static Thread serverSocketThread;
-
-	/**
-	  * When raised, stops the serverSocketThread after the serverSocket is
-	  *  closed.
-	  */
-	private static volatile boolean stopSignal;	
-	
-	/**
 	  * Destination address for UDP mode.
 	  */
 	private static DatagramPacket udpPacket;
@@ -1296,55 +1028,14 @@ System.err.println("Using SAX parser: "+xmlReader.getClass().getName());
 	private static DatagramSocket udpSocket;
 	
 	/**
-	  * The amount of time allowed for a resource download.  Functional
-	  *  only on Java 1.5 or later.  The default is 60000 (one minute).
-	  */
-	private static int resourceReadTimeout = 60000;
-	
-	private static final java.lang.reflect.Method urlConnectionReadTimeoutMethod;
-	
-	static {
-		java.lang.reflect.Method temp = null;
-		try {
-			Class[] args = { int.class }; 
-			temp = URLConnection.class.getDeclaredMethod(
-					"setReadTimeout",
-					args
-			);
-		} catch (Throwable t) {
-			System.err.println("Read Timeout not available.");
-		}
-		urlConnectionReadTimeoutMethod = temp;
-	}	
-	
-	/**
 	  * Percentage of the calculated interval to use until the next update.
 	  *  Values smaller than 100 cause more updates than necessary but 
 	  *  guarantee that resource updates are not missed.
 	  */
 	static int deltaFraction = 90;
-	
-	/**
-	  * The number of consecutive successful GETs before the algorithm gives up
-	  *  trying to find the bounds and goes to the minimum value.
-	  */
-	static int successCountToMin = 5;
-	
-	/**
-	  * The number of consecutive failed GETs (not modified or otherwise) before
-	  *  the algorithm gives up and goes to the maximum value.  This saves on
-	  *  network bandwidth in cases where a resource is down.
-	  */
-	static int failCountToMax = 5;
-		
 	static String destURLPath, destPrefix, mkcolQuery, 
 			defaultUser, defaultPassword, putAuth;
 	static boolean debug = false, resetResources = false;
 	static java.net.URLStreamHandlerFactory webDavHandlerFactory;
-	
-	/**
-	  * Set to a class object that extends Resource, if desired.
-	  */
-	static Class resourceClass;
 }
 

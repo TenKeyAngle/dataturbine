@@ -29,6 +29,7 @@ import java.util.Hashtable;
 // import java.awt.Dialog;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
 // import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -77,8 +78,7 @@ public class OrdinateDialog extends JDialog
 	
 	ht=h;
 	
-	//EMF 4/10/07: use Environment font so size can be changed
-	setFont(Environment.FONT12);
+	setFont(new Font("Dialog", Font.PLAIN, 12));
 	GridBagLayout gbl = new GridBagLayout();
 	getContentPane().setLayout(gbl);
 	GridBagConstraints gbc = new GridBagConstraints();
@@ -96,7 +96,6 @@ public class OrdinateDialog extends JDialog
 	autoUD_CB =
 	    new JRadioButton(
 	        "AutoScale (increasing/decreasing)", autoScale && autoDecrease);
-        autoUD_CB.setFont(Environment.FONT10);
 	group.add(autoUD_CB);
 	autoUD_CB.addItemListener(this);
 	gbc.gridx=0;
@@ -108,21 +107,18 @@ public class OrdinateDialog extends JDialog
 	autoU_CB =
 	    new JRadioButton(
 	        "AutoScale (increasing only)", autoScale && !autoDecrease);
-        autoU_CB.setFont(Environment.FONT10);
 	group.add(autoU_CB);
 	autoU_CB.addItemListener(this);
 	gbc.gridy=1;
 	getContentPane().add(autoU_CB,gbc);
 	
 	manual_CB=new JRadioButton("Manual Scaling",!autoScale);
-        manual_CB.setFont(Environment.FONT10);
 	group.add(manual_CB);
 	manual_CB.addItemListener(this);
 	gbc.gridy=2;
 	getContentPane().add(manual_CB,gbc);
 	
 	divLabel=new JLabel("Number of Divisions ", SwingConstants.RIGHT);
-        divLabel.setFont(Environment.FONT10);
 	// divLabel.setAlignment(Label.RIGHT);
 	gbc.gridy=3;
 	gbc.gridwidth=1;
@@ -130,7 +126,6 @@ public class OrdinateDialog extends JDialog
 	getContentPane().add(divLabel,gbc);
 	
 	divChoice=new JComboBox();
-        divChoice.setFont(Environment.FONT10);
 	for (int i = 1; i <= 10; ++i) {
 	    divChoice.addItem(Integer.toString(i));
 	}
@@ -140,7 +135,6 @@ public class OrdinateDialog extends JDialog
 	getContentPane().add(divChoice,gbc);
 	
 	minLabel=new JLabel("Minimum ", SwingConstants.RIGHT);
-        minLabel.setFont(Environment.FONT10);
 	// minLabel.setAlignment(Label.RIGHT);
 	gbc.gridx=0;
 	gbc.gridy=4;
@@ -148,20 +142,17 @@ public class OrdinateDialog extends JDialog
 	getContentPane().add(minLabel,gbc);
 	//paramPanel.add(minLabel);
 	minField=new JTextField(((Double)ht.get("min")).toString(),16);
-        minField.setFont(Environment.FONT10);
 	gbc.gridx=1;
 	getContentPane().add(minField,gbc);
 	//paramPanel.add(minField);
 	
 	maxLabel=new JLabel("Maximum ", SwingConstants.RIGHT);
-        maxLabel.setFont(Environment.FONT10);
 	// maxLabel.setAlignment(Label.RIGHT);
 	//paramPanel.add(maxLabel);
 	gbc.gridx=0;
 	gbc.gridy=5;
 	getContentPane().add(maxLabel,gbc);
 	maxField=new JTextField(((Double)ht.get("max")).toString(),16);
-        maxField.setFont(Environment.FONT10);
 	gbc.gridx=1;
 	getContentPane().add(maxField,gbc);
 	//paramPanel.add(maxField);
@@ -176,11 +167,9 @@ public class OrdinateDialog extends JDialog
 	JPanel lowerPanel = new JPanel();
 	lowerPanel.setLayout(new GridLayout(1,2,15,5));
 	JButton ok = new JButton("Ok");
-        ok.setFont(Environment.FONT10);
 	ok.addActionListener(this);
 	lowerPanel.add(ok);
 	JButton cancel = new JButton("Cancel");
-        cancel.setFont(Environment.FONT10);
 	cancel.addActionListener(this);
 	lowerPanel.add(cancel);
 	gbc.gridx=0;

@@ -44,9 +44,7 @@ public class PlotOrdinate extends JComponent {
    private int numLines=1;
    private Image bufferImage=null;
    private boolean newLimits=true;
-   //EMF 4/10/07: use Environment font so size can be changed
-   //private Font f=new Font("Dialog",Font.PLAIN,10);
-   private Font f=Environment.FONT10;
+   private Font f=new Font("Dialog",Font.PLAIN,10);
    private FontMetrics fm=null;
    private int fascent=5;
    private int fadvance=20;

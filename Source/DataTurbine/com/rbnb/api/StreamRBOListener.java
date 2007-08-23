@@ -107,24 +107,16 @@ import java.util.Vector;
  * @see com.rbnb.api.StreamServerListener
  * @see com.rbnb.api.StreamRequestHandler
  * @since V2.0
- * @version 03/13/2007
+ * @version 07/15/2005
  */
 
 /*
- * Copyright 2001, 2002, 2003, 2004, 2005, 2007 Creare Inc.
+ * Copyright 2001, 2002, 2003, 2004, 2005 Creare Inc.
  * All Rights Reserved
  *
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 03/13/2007  JPW	Make a change in findStartRequest():
- *			For subscription to oldest, if there is no Frange in
- *			the extracted DataRequest, set foundR to false and wait
- *			for frames to show up.  This fixes a bug when a
- *			subscription by frame to oldest starts up before any
- *			data is in the Source, and where there are registered
- *			channels in the Source.  In this case, a DataRequest
- *			was extracted, but it didn't have a start frame.
  * 2005/07/15  WHF	Added OutOfMemoryError handling to processWorking().
  * 04/25/2005  JPW	Change in processWorking(): If we got a match and if
  *			the user is in Monitor mode, check that we don't send
@@ -537,8 +529,8 @@ final class StreamRBOListener
 	    }
 	}
 	
-	// System.err.println("StreamRBOListener.checkStart(): After  NS: "+needStart+"  NW: "+needWait+"  CR: "+continueR+"  MW:\n"+myWorking+"  Base:\n"+base + "\n");
-	
+//System.err.println("After  NS: "+needStart+"  NW: "+needWait+"  CR: "+continueR+"  MW:\n"+myWorking+"  Base:\n"+base);
+
 	return (continueR);
     }
 
@@ -785,7 +777,7 @@ final class StreamRBOListener
      * @exception java.lang.InterruptedException
      *		  thrown if this operation is interrupted.
      * @since V2.2
-     * @version 03/13/2007
+     * @version 06/16/2003
      */
 
     /*
@@ -793,13 +785,6 @@ final class StreamRBOListener
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 03/13/2007  JPW	For subscription to oldest, if there is no Frange in
-     *			the extracted DataRequest, set foundR to false and wait
-     *			for frames to show up.  This fixes a bug when a
-     *			subscription by frame to oldest starts up before any
-     *			data is in the Source, and where there are registered
-     *			channels in the Source.  In this case, a DataRequest
-     *			was extracted, but it didn't have a start frame.
      * 06/16/2003  INB	Extracted from <code>findStart</code>.
      *
      */
@@ -856,8 +841,7 @@ final class StreamRBOListener
 		if ((myOriginal != null) &&
 		    (myOriginal.getReference() == DataRequest.NEWEST) &&
 		    (myOriginal.getDomain() == DataRequest.FUTURE) &&
-		    (result.getChildAt(0).getFrange() != null))
-		{
+		    (result.getChildAt(0).getFrange() != null)) {
 		    // Future requests for frame ranges must match the latest
 		    // frame.
 		    TimeRange tLimits = new TimeRange(Double.MAX_VALUE),
@@ -874,19 +858,6 @@ final class StreamRBOListener
 			(result.getChildAt(0).getFrange().getLimits()[1] ==
 			 fLimits.getLimits()[1]);
 		}
-		else if ((myOriginal != null)                                   &&
-			 (myOriginal.getReference() == DataRequest.OLDEST)      &&
-			 (myOriginal.getNrepetitions() == DataRequest.INFINITE) &&
-			 (result.getChildAt(0).getFrange() == null))
-		{
-		    // JPW 03/09/2007: User has subscribed to oldest, but there
-		    //                 is no Frange in the DataRequest;
-		    //                 set foundR to false and wait for data to
-		    //                 show up
-		    foundR = false;
-		    setNeedWait(true);
-		}
-		
 		if (foundR) {
 		    setWorking(result);
 		}
@@ -1571,7 +1542,7 @@ final class StreamRBOListener
 		    if ((count = processWorking(count)) == -1) {
 			break;
 		    }
-		    
+
 		    if (!getNeedStart() && !(count == -2)) {
 			// If we're not waiting for the start, then move on to
 			// the next increment.

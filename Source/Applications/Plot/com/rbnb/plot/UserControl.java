@@ -121,10 +121,8 @@ public class UserControl extends JComponent
    public UserControl(JFrame f,RunModeCubby rmc,LayoutCubby loc,
       RBNBCubby rbc,PosDurCubby pdc,Environment env) {
       
-      //EMF 4/10/07: use Environment font so size can be changed
       // JPW 04/12/2005: set the font
-      //setFont(new Font("Dialog", Font.PLAIN, 12));
-      setFont(Environment.FONT12);
+      setFont(new Font("Dialog", Font.PLAIN, 12));
       
       // save cubbyholes
       JFrame frame=f;
@@ -143,35 +141,27 @@ public class UserControl extends JComponent
 	 // create run mode buttons and callback class instances
 	 buttons=new LWContainer();
 	 bof=new JButton("| <");
-	 bof.setFont(Environment.FONT10);
 	 bof.addActionListener(new ButtonListener(buttons,bof,runModeCubby,RunModeDefs.bof));
 	 bof.setName(Integer.toString(RunModeDefs.bof));
 	 revPlay=new JButton("<");
-	 revPlay.setFont(Environment.FONT10);
 	 revPlay.addActionListener(new ButtonListener(buttons,revPlay,runModeCubby,RunModeDefs.revPlay));
 	 revPlay.setName(Integer.toString(RunModeDefs.revPlay));
 	 revStep=new JButton("< |");
-	 revStep.setFont(Environment.FONT10);
 	 revStep.addActionListener(new ButtonListener(buttons,revStep,runModeCubby,RunModeDefs.revStep));
 	 revStep.setName(Integer.toString(RunModeDefs.revStep));
 	 stop=new JButton("||");
-	 stop.setFont(Environment.FONT10);
 	 stop.addActionListener(new ButtonListener(buttons,stop,runModeCubby,RunModeDefs.stop));
 	 stop.setName(Integer.toString(RunModeDefs.stop));
 	 fwdStep=new JButton("| >");
-	 fwdStep.setFont(Environment.FONT10);
 	 fwdStep.addActionListener(new ButtonListener(buttons,fwdStep,runModeCubby,RunModeDefs.fwdStep));
 	 fwdStep.setName(Integer.toString(RunModeDefs.fwdStep));
 	 fwdPlay=new JButton(">");
-	 fwdPlay.setFont(Environment.FONT10);
 	 fwdPlay.addActionListener(new ButtonListener(buttons,fwdPlay,runModeCubby,RunModeDefs.fwdPlay));
 	 fwdPlay.setName(Integer.toString(RunModeDefs.fwdPlay));
 	 eof=new JButton("> |");
-	 eof.setFont(Environment.FONT10);
 	 eof.addActionListener(new ButtonListener(buttons,eof,runModeCubby,RunModeDefs.eof));
 	 eof.setName(Integer.toString(RunModeDefs.eof));
 	 realTime=new JButton("RT");
-	 realTime.setFont(Environment.FONT10);
 	 realTime.addActionListener(new ButtonListener(buttons,realTime,runModeCubby,RunModeDefs.realTime));
 	 realTime.setName(Integer.toString(RunModeDefs.realTime));
 	 posSlider=new JScrollBar(JScrollBar.HORIZONTAL,psval,psblock,psmin,psmax);
@@ -200,7 +190,6 @@ public class UserControl extends JComponent
 	
 	 //make channel button
 	 channelButton=new JButton("Channels");
-	 channelButton.setFont(Environment.FONT10);
 	 channelButton.addActionListener(this);
 		// create channel list, request channels
       //channelList = new List(6,true);
@@ -968,9 +957,7 @@ class LWContainer extends JComponent {
 //EMF 3/2/05: replace FWLabel with a TextField so data can be entered
 //            as well as just displayed
 class FWField extends JTextField {
-        //EMF 4/10/07: use Environment font so size can be changed
-	//private Font f = new Font("Dialog",Font.PLAIN,10);
-	private Font f = Environment.FONT10;
+	private Font f = new Font("Dialog",Font.PLAIN,10);
 	
 	public FWField(String text,String refWidth,int align) {
 		super(text,refWidth.length());
@@ -1064,9 +1051,7 @@ class DurationTextListener implements ActionListener, FocusListener {
 // need to use double buffering to eliminate flashing
 // class FWLabel extends Container {
 class FWLabel extends JComponent {
-   //EMF 4/10/07: use Environment font so size can be changed
-   //private Font f = new Font("Dialog",Font.PLAIN,10);
-   private Font f = Environment.FONT10;
+   private Font f = new Font("Dialog",Font.PLAIN,10);
    private FontMetrics fm = getFontMetrics(f);
    private String label = null;
    private int alignment = SwingConstants.LEFT;

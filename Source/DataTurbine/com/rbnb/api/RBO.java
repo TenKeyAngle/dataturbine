@@ -5677,7 +5677,7 @@ private boolean alreadyReset=false;
 
 //EMF 10/25/06: inform ringbuffer of trim time attributes so will
 //              flush/trim appropriately
-		    rb.setupTrimTimes(cacheflush,cachetrim,archiveflush,archivetrim);
+rb.setupTrimTimes(cacheflush,cachetrim,archiveflush,archivetrim);
 
 		    if (lastRB == null) {
 			// If this is the first good <code>RingBuffer</code>,
@@ -6113,7 +6113,7 @@ private boolean alreadyReset=false;
 	archiveFrames = archiveFramesI;
         //EMF 10/18/06: set trim times if appropriate
         String dotrim=System.getProperty("trimbytime","false");
-        if (!dotrim.equals("false")) {
+        if (dotrim.equals("true")) {
           archivetrim=archiveFrames;
           //if (cacheflush>(archivetrim/10)) cacheflush=archivetrim/10;
           archiveflush=cacheflush*60;
@@ -6122,8 +6122,8 @@ private boolean alreadyReset=false;
             cacheflush=archiveflush;
             cachetrim=archiveflush;
           }
-//System.err.println("Trim-By-Time! cacheflush="+cacheflush+", cachetrim="+cachetrim+", archiveflush="+archiveflush+", archivetrim="+archivetrim);
         }
+//System.err.println("RBO.setAframes: cacheflush="+cacheflush+", cachetrim="+cachetrim+", archiveflush="+archiveflush+", archivetrim="+archivetrim);
     }
 
     /**
@@ -6270,11 +6270,10 @@ private boolean alreadyReset=false;
 	cacheFrames = cacheFramesI;
         //EMF 10/18/06: set trim times if appropriate
         String dotrim=System.getProperty("trimbytime","false");
-        if (!dotrim.equals("false")) {
+        if (dotrim.equals("true")) {
           cacheflush=cacheFrames;
           cachetrim=cacheflush;
-//System.err.println("Trim-By-Time Mode! RBO.setCframes: cacheflush="+cacheflush+", cachetrim="+cachetrim);
-
+System.err.println("Trim-By-Time Mode! RBO.setCframes: cacheflush="+cacheflush+", cachetrim="+cachetrim);
         }
 //System.err.println("RBO.setCframes: cacheflush="+cacheflush+", cachetrim="+cachetrim);
     }
@@ -6963,11 +6962,8 @@ private boolean alreadyReset=false;
 	}
 
 	// Report the results.
-	if (!(this instanceof Log) && !(this instanceof NBO)) {
-	  String report = "";
-          String dotrim=System.getProperty("trimbytime","false");
-          if (dotrim.equals("false")) {
-	    report =
+	if (!(this instanceof Log)) {
+	    String report =
 		"Set up cache with " +
 		((cFrameSets == 0) ?
 		 "1 frameset of 1 frame/set (total frames = 1)." :
@@ -6982,11 +6978,8 @@ private boolean alreadyReset=false;
 		    "(total frames = " +
 		    aFileSets*aFrSFileSet*cFrFrameSet + ")";
 	    }
-	  }
-	  else {
-	    report="Trim-By-Time! cacheflush="+cacheflush+", cachetrim="+cachetrim+", archiveflush="+archiveflush+", archivetrim="+archivetrim;
-	  }
-	  getLog().addMessage(getLogLevel(),
+//System.err.println("RBO.setUpRingBuffer: cacheflush="+cacheflush+", cachetrim="+cachetrim+", archiveflush="+archiveflush+", archivetrim="+archivetrim);
+	    getLog().addMessage(getLogLevel(),
 				getLogClass(),
 				getName(),
 				report);

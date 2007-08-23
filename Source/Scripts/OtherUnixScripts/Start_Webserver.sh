@@ -21,7 +21,7 @@ fi
 
 # Start Catalina
 export CATALINA_OPTS="-mx128m"
-cd ../apache-tomcat-*/bin
+cd ../jakarta-tomcat-*/bin
 chmod a+rx *.sh
 ./catalina.sh start "$@"
 

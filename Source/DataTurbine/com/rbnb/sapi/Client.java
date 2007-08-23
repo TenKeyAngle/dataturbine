@@ -605,108 +605,68 @@ public abstract class Client implements java.io.Serializable
 			source.reset();	
 		} catch (Exception e) { throw new SAPIException(e); }
 	}
-	
+
 	final void doRegister(ChannelMap cm) throws SAPIException
 	{
 		assertConnection();
-		
+
 		try {
-		    // JPW 03/06/2007: Replace the guts of this method with a call
-		    //                 to the new method, createRegistrionRmap().
-		    Rmap toRegister = createRegistrationRmap(cm);
-		    //System.err.println("Registering: "+toRegister);
-		    if (getClient() instanceof com.rbnb.api.PlugIn) {
+/* 11/13/2002  WHF  
+	this functionality duplicated by ChannelMap.produceRequest():
+		Rmap toRegister=(Rmap) cm.getDataRequest().clone(),
+			metaData=cm.produceOutput();
+		metaData.collapse();
+		cm.clearData();
+*/
+		Rmap toRegister=cm.produceRequest();
+
+		// The Rmap's mergeWith doesn't do what we need it to do here:
+		//toRegister = toRegister.mergeWith(metaData);
+//System.err.println(toRegister);
+
+		// Add data markers to end points, to signify that they 
+		//  represent channels that the plugin will answer to:
+		forEachEndpoint(toRegister, addDataMarkerAction);
+
+		// Remove any time information which may have snuck into the 
+		//  registration map:
+//		forEachNode(metaData, removeTimeAction);
+		forEachNode(toRegister, removeTimeAction);
+//System.err.println(metaData);
+		// Meta data should be a subset of the toRegister channels
+		//  (produced with ChannelMap.Add()).
+		//  Therefore, we need to merge the meta-data with the added
+		//  channels.
+/* 11/14/2002  WHF  None of this should be necessary:
+		String [] metaChan=metaData.extractNames();
+		for (int ii=0; ii<metaChan.length; ++ii)
+		{
+			Rmap redundant=toRegister.findDescendant(metaChan[ii],false);
+//System.err.println(metaChan[ii]+"\n"+redundant);
+			redundant.getParent().removeChild(redundant);
+		} // if we get a null pointer exception here, something weird is
+		//  happening either with findDescendant or the state of the 
+		//  channelmap.
+
+		// In case any null hierarchies are left over from deleting 
+		//  redundancies above:
+		toRegister.collapse();
+
+		toRegister.addChild(metaData);
+*/
+		toRegister.setName(null);
+//System.err.println("Registering: "+toRegister);
+		if (getClient() instanceof com.rbnb.api.PlugIn)
 			((com.rbnb.api.PlugIn) getClient()).reRegister(toRegister);
-		    } else {
-			((com.rbnb.api.Source) getClient()).register(toRegister);
-		    }
-		} catch (Exception e) {
-		    throw new SAPIException(e);
-		}
+		else ((com.rbnb.api.Source) getClient()).register(toRegister);
+		} catch (Exception e) { throw new SAPIException(e); }
 	}
 	
 	final void assertConnection() throws SAPIException
 	{
 		if (getClient()==null)
 			throw new SAPIException("This operation requires a connection.");
-	}
-	
-	/**
-	 * Produce a full RBNB API Rmap object from the given SAPI ChannelMap.
-	 * @exception Exception thrown on error.
-	*/
-	/*
-	 *
-	 *   Date      By	Description
-	 * MM/DD/YYYY
-	 * ----------  --	-----------
-	 * 03/06/2007  JPW	Created out of the guts of doRegister().
-	 *			This method was originally created because I thought I might call it from
-	 *			com.rbnb.api.MirrorController.getUserInfo(), but I don't.
-	 */
-	
-	private static Rmap createRegistrationRmap(ChannelMap cm) throws Exception {
-		
-		/*
-		 * 11/13/2002  WHF  this functionality duplicated by ChannelMap.produceRequest():
-		 Rmap toRegister=(Rmap) cm.getDataRequest().clone(),
-		      metaData=cm.produceOutput();
-		 metaData.collapse();
-		 cm.clearData();
-		 *
-		 */
-		
-		// JPW 02/28/2007: Add new boolean argument to ChannelMap.produceRequest();
-		//                 "false" argument will prevent an exception being thrown
-		//                 if there is a mix of channels with and without data - which
-		//                 is OK when registering channels (in registration, we can
-		//                 have a mix of channels with and without data (User Info)).
-		Rmap toRegister=cm.produceRequest(false);
-		
-		// The Rmap's mergeWith doesn't do what we need it to do here:
-		// toRegister = toRegister.mergeWith(metaData);
-		// System.err.println(toRegister);
-		
-		// Add data markers to end points, to signify that they 
-		//  represent channels that the plugin will answer to:
-		forEachEndpoint(toRegister, addDataMarkerAction);
-		
-		// Remove any time information which may have snuck into the
-		// registration map:
-		// forEachNode(metaData, removeTimeAction);
-		forEachNode(toRegister, removeTimeAction);
-		
-		//System.err.println(metaData);
-		// Meta data should be a subset of the toRegister channels
-		//  (produced with ChannelMap.Add()).
-		//  Therefore, we need to merge the meta-data with the added
-		//  channels.
-		
-		/*
-		 * 11/14/2002  WHF  None of this should be necessary:
-		 *
-		String [] metaChan=metaData.extractNames();
-		for (int ii=0; ii<metaChan.length; ++ii)
-		{
-			Rmap redundant=toRegister.findDescendant(metaChan[ii],false);
-			//System.err.println(metaChan[ii]+"\n"+redundant);
-			redundant.getParent().removeChild(redundant);
-		} // if we get a null pointer exception here, something weird is
-		//  happening either with findDescendant or the state of the 
-		//  channelmap.
-		
-		// In case any null hierarchies are left over from deleting 
-		//  redundancies above:
-		toRegister.collapse();
-		
-		toRegister.addChild(metaData);
-		*
-		*/
-		
-		toRegister.setName(null);
-		
-		return toRegister;
-	}
+	}		
 
 	/**
 	  * Implementation of CloseRBNBConnection() and Detach().
@@ -737,18 +697,8 @@ public abstract class Client implements java.io.Serializable
 			} catch (Exception e) 
 		{ /* throw new SAPIException(e); */ }
 	}
-	
-	final Server getServer() { return server; }
 
-	/**
-	  * Intended for use with Control clients.
-	  */
-/*	final void terminateLocalServer()
-	{
-		server.stop();
-		server = null;
-		clearData();
-	} */
+	
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////// Static Utility Methods: /////////////////////////////
 	/**
@@ -954,7 +904,7 @@ public abstract class Client implements java.io.Serializable
 		Rmap r=(Rmap) o;
 		r.setTrange(null);
 	} };
-	
+
 	// Create and initialize 'dot' Rmap:
 	private static Rmap dotRmap; 
 	static {

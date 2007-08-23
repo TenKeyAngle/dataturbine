@@ -18,16 +18,11 @@ limitations under the License.
 	PlugInTemplate.java
 
 	2006/10/30  WHF  Created.
-	2007/03/12  WHF  Supports frame based requests.
-	2007/03/22  WHF  Changed the default for forwarding request data to 'true'.
-			Improved handling of exceptions in the request slave.
-	2007/04/03  WHF  Added getRequestOptions().
 */
 
 package com.rbnb.plugins;
 
 import java.util.Hashtable;
-import java.util.Properties;
 import java.util.Stack;
 
 import com.rbnb.sapi.*;
@@ -55,15 +50,7 @@ public abstract class PlugInTemplate
 	/**
 	  * Create a FilterPlugIn with default parameters.
 	  */
-	protected PlugInTemplate()
-	{
-		boolean temp=false;
-		try {
-			temp=Boolean.getBoolean("com.rbnb.plugins.PlugInTemplate.debug");
-		} catch (SecurityException se) 
-		{  } // not allowed, no debug.
-		debugFlag=temp;
-	}
+	protected PlugInTemplate() {}
 	
 	/**
 	  * Create a FilterPlugIn specifying the RBNB host and the client name.
@@ -73,8 +60,6 @@ public abstract class PlugInTemplate
 			String name
 	)
 	{
-		this();
-		
 		this.host = host;
 		this.name = name;
 	}
@@ -186,6 +171,18 @@ public abstract class PlugInTemplate
 	public final void setTimeout(long timeout) { this.timeout = timeout; }
 
 	/**
+	  * May be called by subclasses as the return value
+	  *  in processRequest() to handle streaming automatically.
+	  * 
+	  * @see #processRequest(ChannelMap, PlugInChannelMap)
+	  */
+/*	protected final boolean defaultStreamAction(PlugInChannelMap out)
+	{
+		return out.GetRequestType() == PlugInChannelMap.RT_MONITOR
+			|| out.GetRequestType() == PlugInChannelMap.RT_SUBSCRIBE;
+	} */
+	
+	/**
 	  * If true, one sink is used to get all forwarding data.  Otherwise,
 	  *  one sink is used per thread created to handle an incoming request.
 	  * <p>The default is false.
@@ -212,7 +209,7 @@ public abstract class PlugInTemplate
 	  * If true, the data from incoming requests is forwarded to the sink
 	  *   to get matching data for processing.
 	  *  Otherwise, the forwarded request contains only the channel names.
-	  * <p>The default is true.
+	  * <p>The default is false.
 	  */
 	public final boolean getForwardRequestData() { return forwardRequestData; }
 	public final void setForwardRequestData(boolean forwardRequestData)
@@ -244,7 +241,7 @@ public abstract class PlugInTemplate
 	
 	/**
 	  * If the user request class has been set, and we are inside a callback
-	  *  such as {@link #processRequest(ChannelMap, PlugInChannelMap)},
+	  *  such as {@link processRequest(ChannelMap, PlugInChannelMap)},
 	  *  then this method returns an 
 	  *  instance of the user request class.
 	  * @return The user request object instance of the current thread, or null.
@@ -281,20 +278,6 @@ public abstract class PlugInTemplate
 		return null;
 	}
 	
-	/**
-	  * Gives a Properties object, which represents the options set
-	  *   by the Sink for this PlugIn when the request was made.  Note that
-	  *   calls to this function must be made inside one of the callback
-	  *   methods of this class.
-	  */
-	public final Properties getRequestOptions()
-	{
-		AnswerRequest ar = (AnswerRequest) thread2RequestMap.get(
-				Thread.currentThread());
-		if (ar != null) return ar.getRequestOptions();
-		return null;		
-	}
-	
 //*****************************  Overrides  *********************************//
 	/**
 	  * Callback to create a ChannelMap to be used to request data from the 
@@ -313,8 +296,6 @@ public abstract class PlugInTemplate
 	protected ChannelMap createForwardMap(PlugInChannelMap picm)
 		throws SAPIException 
 	{
-		if (debugFlag) System.err.println("Creating forward map from: "+picm);
-		
 		ChannelMap cm = new ChannelMap();
 		
 		if ("registration".equals(picm.GetRequestReference())) {
@@ -343,8 +324,7 @@ public abstract class PlugInTemplate
 		} else {
 			// Other kind of request:
 			for (int ii = 0; ii < picm.NumberOfChannels(); ++ii) {
-				if (picm.GetName(ii).length() > 0)
-					addChannel(picm, ii, cm);
+			    addChannel(picm, ii, cm);
 			}
 		}
 		return cm;
@@ -357,7 +337,7 @@ public abstract class PlugInTemplate
 	  *    is true; otherwise an empty ChannelMap which may be used as desired.
 	  * @param out  PlugIn output.
 	  *
-	  * @see #setForwardRequests(boolean)
+	  * @see #setForwardRequests()
 	  * @see #getUserRequestClass()
 	  * @see #getRequestSink()
 	  */
@@ -384,7 +364,7 @@ public abstract class PlugInTemplate
 	}
 	
 	/**
-	  * Callback to make the request to the server for matching data.  Override
+	  * Callback to makes the request to the server for matching data.  Override
 	  *  if you wish to alter the way the request is made.
 	  * <p>Note that this method is not called if the 
 	  *  {@link #getForwardRequests() } property is false.
@@ -396,21 +376,15 @@ public abstract class PlugInTemplate
 			PlugInChannelMap picm)
 		throws SAPIException
 	{
-		if (debugFlag)
-			System.err.println("Forwarding "+mappedChannels
-					+(picm.IsRequestFrames()?"\n(frames)":""));		
-		
-		if (picm.IsRequestFrames()) {
-			sink.RequestFrame(mappedChannels);
-		} else {
-			sink.Request(
-					mappedChannels,
-					picm.GetRequestStart(),
-					picm.GetRequestDuration(),
-					picm.GetRequestReference(),
-					picm.GetRequestOptions()
-			);
-		}
+//System.err.println(picm);
+
+		sink.Request(
+				mappedChannels,
+				picm.GetRequestStart(),
+				picm.GetRequestDuration(),
+				picm.GetRequestReference(),
+				picm.GetRequestOptions()
+		);
 		sink.Fetch(timeout, mappedChannels);
 		
 		return mappedChannels;
@@ -422,8 +396,7 @@ public abstract class PlugInTemplate
 	{
 		int destIndex = dest.Add(src.GetName(srcIndex));
 		if (forwardRequestData) {
-			// 2007/03/23  WHF  Copying the time breaks server requests.
-			//dest.PutTimeRef(src, destIndex);
+			dest.PutTimeRef(src, destIndex);
 			dest.PutDataRef(destIndex, src, srcIndex);
 		}
 	}
@@ -511,7 +484,6 @@ public abstract class PlugInTemplate
 		final void answerRequest(PlugInChannelMap requestMap)
 		{ 
 			this.requestMap=requestMap;
-			parseOptions(requestMap);
 			(thread = new Thread(
 					this,
 					PlugInTemplate.this.getClass().getName()
@@ -522,46 +494,33 @@ public abstract class PlugInTemplate
 		public final void run()
 		{
 			try {
-				try {
-					ChannelMap map;
-					
-					thread2RequestMap.put(thread, this);
-					
-					if (forwardRequests) {
-						map = createForwardMap(requestMap);
-					
-						if (oneSink) {
-							synchronized (globalSink) {
-								map = getForwardData(
-										globalSink,
-										map,
-										requestMap
-								);
-							}
-						} else {
-							Sink sink = connect();
-							map = getForwardData(sink, map, requestMap);
+				ChannelMap map;
+				
+				thread2RequestMap.put(thread, this);
+				
+				if (forwardRequests) {
+					map = createForwardMap(requestMap);
+				
+					if (oneSink) {
+						synchronized (globalSink) {
+							map = getForwardData(globalSink, map, requestMap);
 						}
-					} else map = new ChannelMap();
-			
-					if (!map.GetIfFetchTimedOut()) {
-						if ("registration".equals(
-								requestMap.GetRequestReference()))
-							processRegistrationRequest(map, requestMap);
-						else processRequest(map, requestMap);				
-					}	
-				} catch (Exception e) {
-					e.printStackTrace();
+					} else {
+						Sink sink = connect();
+						map = getForwardData(sink, map, requestMap);
+					}
+				} else map = new ChannelMap();
+		
+				if (!map.GetIfFetchTimedOut()) {
+					if ("registration".equals(requestMap.GetRequestReference()))
+						processRegistrationRequest(map, requestMap);
+					else processRequest(map, requestMap);				
 				}
-				try {
-					// 2007/03/22  WHF  Moved Flush() into a separate try block.
-					//  Even if the above code throws, we want to give
-					//  something back to the server so the client doesn't 
-					//  hang.
-					pi.Flush(requestMap);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+
+				pi.Flush(requestMap);
+			} catch (Exception e) 
+			{
+				e.printStackTrace(); 
 			} finally {
 				thread2RequestMap.remove(thread);
 			}
@@ -596,29 +555,6 @@ public abstract class PlugInTemplate
 			return perRequestSink;
 		}
 		
-		private void parseOptions(PlugInChannelMap picm)
-		{
-			requestOptions.clear();
-			int index = picm.GetIndex(""); // appears as nameless
-			if (index == -1) return; // no parameters
-			String[] data = picm.GetDataAsString(index);
-			for (int ii = 0; ii < data.length; ++ii) {
-				try {
-					requestOptions.load(new java.io.ByteArrayInputStream(
-							data[ii].getBytes()));
-				} catch (Throwable t) {
-					System.err.print("WARNING: Option could not be parsed: \"");
-					System.err.print(data[ii]);
-					System.err.println("\"");
-					t.printStackTrace();
-				}
-			}
-			if (debugFlag) {
-				System.err.println(PlugInTemplate.this.getClass().getName()
-						+" request options: ");
-				System.err.println(requestOptions);
-			}
-		}
 		final void close()
 		{ if (perRequestSink != null) perRequestSink.CloseRBNBConnection(); } 
 		
@@ -632,8 +568,6 @@ public abstract class PlugInTemplate
 		final Sink getSink() throws SAPIException
 		{ return oneSink ? globalSink : connect(); }
 		
-		final Properties getRequestOptions() { return requestOptions; }
-		
 		///////// AnswerRequest Private Data /////////////
 		private PlugInChannelMap requestMap;
 		/**
@@ -642,7 +576,6 @@ public abstract class PlugInTemplate
 		private Sink perRequestSink;
 		private Thread thread;
 		private final Object userInstance;
-		private final Properties requestOptions = new Properties();
 	} // end class AnswerRequest
 	
 //******************************  Data  *************************************//	
@@ -656,10 +589,8 @@ public abstract class PlugInTemplate
 			serverName;
 	private long timeout = -1;
 	private boolean oneSink = false, forwardRequests = true, 
-			forwardRequestData = true;
+			forwardRequestData = false;
 	private Class userClass;
-	
-	private final boolean debugFlag;
 	
 	private final PlugIn pi = new PlugIn();
 	private final Slave slave = new Slave();

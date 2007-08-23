@@ -73,7 +73,6 @@ import com.rbnb.api.*;
  * 11/20/2006  EMF      Changed default registration request to * / ...
  *                      so channel list includes one level of plugins and routes
  * 12/21/2006  MJM	Reversed EMF 11/20/2006 change, registration back to "..."
- * 03/08/2007  WHF  Added RequestFrame().
  *
  */
 public class Sink extends Client
@@ -1131,22 +1130,6 @@ if (cm.debugFlag) System.err.println("-- Request: \n" +dataReq);
 	public final ChannelMap Fetch(long blockTimeout)
 		throws SAPIException
 	{ return Fetch(blockTimeout,null); }
-	
-	/**
-	  * Makes a request for the next new frame.  This is similar to 
-	  *   {@link #Monitor(ChannelMap, int)},
-	  *  except only one response is given.
-	  *
-	  * <p>Note: this is only applicable to new data,
-	  *   as archived data never has new frames.
-	  */
-	public final void RequestFrame(ChannelMap cm) throws SAPIException
-	{
-		DataRequest dataReq=cm.produceRequest();
-		// 1.0 means increment one frame:
-		dataReq.setRepetitions(1, 1.0);
-		startsubscription(dataReq, DataRequest.NEWEST);
-	}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////// Package private functions from client: //////////////

@@ -233,7 +233,6 @@ final class RBNBRouter
 		throw new com.rbnb.api.AddressException
 		    ("Cannot accept route from unspecified location.");
 	    }
-
 	    if (bottom.getName().equals(getParent().getName())) {
 		throw new java.lang.IllegalStateException
 		    ("Cannot accept " + typeI + " route from " + hierarchyI +

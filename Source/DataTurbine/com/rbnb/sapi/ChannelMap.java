@@ -71,7 +71,6 @@ import com.rbnb.api.*;
  * 2005/03/31  WHF  Added support to GetUserInfo for a data ChannelMaps.
  * 2005/08/25  WHF  Repaired serialization support.
  * 2005/09/01  EMF  Added serializaton methods, so just underlying RMap is saved.
- * 2007/04/03  WHF  Added AddPlugInOption().
  */
 
 public class ChannelMap implements java.io.Serializable
@@ -227,48 +226,6 @@ public class ChannelMap implements java.io.Serializable
 		folderMappings.put(channelName, channelName);
 		
 		} catch (Exception e) { throw new SAPIException(e); }
-	}
-	
-	/**
-	  * Used in request maps, adds an option to configure a PlugIn's response
-	  *   to this request.
-	  * <p>For example, if you have a ResamplePlugIn running with the name
-	  *  <b>resample</b> and you want to get a maximum of 1200 points from
-	  *  each channel in the request, you would use:
-	  * <p><center><code>
-	  *   channelMap.AddPlugInOption("resample", "maxSamples", "1200")
-	  *  </code></center></p>
-	  * <p>If you wanted to then display a plot of the data through 
-	  * an instance of PNGPlugIn called png, with a width of 640 and 
-	  *  a height of 480, you would instead use:
-	  * <p><center><code>
-	  *   channelMap.AddPlugInOption("png/resample", "maxSamples", "1200")
-	  *  </code></center></p>
-	  * <p><center><code>
-	  *   channelMap.AddPlugInOption("png", "width", "640")
-	  *  </code></center></p>	  
-	  * <p><center><code>
-	  *   channelMap.AddPlugInOption("png", "height", "480")
-	  *  </code></center></p>	  
-	  * <p>
-	  * @param channel  The fully qualified channel representing the 
-	  *   PlugIn to configure.
-	  * @param key      The case-sensitive name of the option to set.
-	  * @param value    The value, a string, of the option to set.
-	  * <p>
-	  * @author WHF
-	  * @since V3.0B4
-	  */
-    /*
-     *   Date      By	Description
-     * MM/DD/YYYY
-     * ----------  --	-----------
-     * 04/03/2007  WHF	Created.
-     */
-	public final void AddPlugInOption(String channel, String key, String value)
-		throws SAPIException
-	{
-		PutDataAsString(Add(channel+"/."), key+"="+value);
 	}
 	
 	/**
@@ -888,19 +845,6 @@ public class ChannelMap implements java.io.Serializable
      */	
 	public final String GetUserInfo(int channel)
 	{
-	    
-	    /////////////////////////////////////////////////////////////////
-	    //
-	    // JPW 03/13/2007
-	    // The same tests as are done here for determining if there is
-	    // USER data are also done in com.rbnb.api.MirrorController.setRegistration();
-	    // therefore, if a change is made here, should also check that
-	    // API method for making the same changes.  Alternately, make a
-	    // Utility method which performs these tests and call the Utility
-	    // method from both places.
-	    //
-	    ////////////////////////////////////////////////////////////////
-	    
 		// Check to see if we have USER data.  This is the result of a user
 		//  calling PutUserInfo on a data channel map that was then flushed
 		//  to the server.
@@ -1380,8 +1324,6 @@ public class ChannelMap implements java.io.Serializable
 	 * MM/DD/YYYY
 	 * ----------  --	-----------
 	 * 01/30/2003  INB	Created.
-	 * 2007/03/23  WHF  Fixed problem when forwarding String/ByteArray data
-	 *     without calling PutTimeRef.
 	 *
 	 */
 	private final void unrollDataRef(int destChannelI,
@@ -1404,21 +1346,15 @@ public class ChannelMap implements java.io.Serializable
 			theTimes = oldTimeReference.getTime();
 		} else {
 			TimeRange tr = getTR();
-			// 2007/03/23  WHF  Added next two lines:
-			if (tr == null) theTimes = null;
-			else {
-				theTimes = new double[ptsI];
-				tr.copyTimes(ptsI, theTimes, 0);
-				if (tr.getDuration() != 0.) {
-					lDuration = tr.getDuration()/ptsI;
-				}
+			theTimes = new double[ptsI];
+			tr.copyTimes(ptsI, theTimes, 0);
+			if (tr.getDuration() != 0.) {
+				lDuration = tr.getDuration()/ptsI;
 			}
 		}
 
 		for (int idx = 0; idx < ptsI; ++idx) {
-			// 2007/03/23  WHF  Added next line:
-			if (theTimes != null)
-				PutTime(theTimes[idx], lDuration);
+			PutTime(theTimes[idx], lDuration);
 			if (dataI instanceof String[]) {
 				PutDataAsString(destChannelI,
 						((String[]) dataI)[idx]);
@@ -2157,6 +2093,7 @@ public class ChannelMap implements java.io.Serializable
 		// For response forwarding:
 //		cm.setResponse(result);
 		if (tokeep) response=result;
+//System.err.println(result);
 if (debugFlag) System.err.println("Processing from fetch "+result);
 
 		if (result!=null)
@@ -2172,22 +2109,10 @@ if (debugFlag) System.err.println("Processing from fetch "+result);
 			for (int ii=0; ii<names.length; ++ii)
 			{
 				String name=names[ii];
-				
-				// 2007/03/23  WHF  Extraction fails for "." channels, because
-				//   extractNames extracts them as nameless (length == 0).
-				//   We briefly remap them back to "." to get any matching
-				//   data.
-				DataArray res;
-				if (name.length() == 0)	res = result.extract(".");
-				else res = result.extract(name);
-	
-				// Original code:
-				// DataArray res=result.extract(name);
+				DataArray res=result.extract(name);
 
-				// 2007/03/23  WHF  Added check for zero length name: 
-				if (       name.length() > 0 
-						&& removeLeadingSlash
-						&& name.charAt(0) == Rmap.PATHDELIMITER)
+//System.err.println("Extracted name: "+name+"\nData: "+res);
+				if (removeLeadingSlash&&name.charAt(0)==Rmap.PATHDELIMITER)
 					name=name.substring(1);
 
 				addFetched(name, res);
@@ -2208,31 +2133,15 @@ if (debugFlag) System.err.println("Processing from fetch "+result);
 	  *  so far to the Rmap.  Channels which have been added but do not
 	  *  contain data will be merged in.
 	  *
-	  * @param bThrowOnMixChans  Throw exception if there is a mix of
-	  *                          channels with and without data?
-	  *
-	  * 11/13/2002  WHF  Added this method.
+	  * 11/13/2002  WHF  Added this method.\
 	  * 2003/10/14  WHF  Throws meaningful exception when an empty request
-	  *                  is made.
-	  * 2007/02/28  JPW  Add new argument, bThrowOnMixChans
-	  * 2007/03/23  WHF  Made both methods final.  Now that they are overloaded,
-	  *    allowing them to be virtual risks confusion.
+	  *  is made.
 	  */
-	
-	// JPW 02/28/2007: Default form of the method
-	final DataRequest produceRequest() throws SAPIException
+	DataRequest produceRequest() throws SAPIException
 	{
-	    return produceRequest(true);
-	}
-	
-	final DataRequest produceRequest(boolean bThrowOnMixChans) throws SAPIException
-	{
-// 2007/04/04  WHF  Experiment:
-bThrowOnMixChans = false;
 		try {
 		DataRequest dataReq=new DataRequest();
 		Rmap base=(Rmap) produceOutput();
-/***  2007/04/04  WHF  Original ordering:
 		boolean doThrow=false;
 		while (base.getNchildren()>0)
 		{
@@ -2246,55 +2155,15 @@ bThrowOnMixChans = false;
 		{
 			Channel ch=(Channel) channelList.elementAt(ii);
 			if (ch.rmap==null) {    // no data, add channel with data marker
-			    
-			    // mjm 2/8/05:  this won't let certain registrations to happen?
-			    
-			    // JPW 02/28/2007: Add bThrowOnMixChans; only throw exception if both
-			    //                 doThrow and bThrowOnMixChans are true. For registration
-			    //                 requests, bThrowOnMixChans will be false - it is OK
-			    //                 if there is a mix of chans with and without User Info
-			    //                 for registration.
-			    if (doThrow && bThrowOnMixChans) {
-				throw new IllegalArgumentException(
-				    "Illegal mixed request of channels with and without data");
-			    }
-			    
-				// 2007/04/04  WHF  Experiment:
-			    //Client.addDataMarkerAction.doAction(dataReq.addChannel(ch.name));
-				Rmap child = dataReq.addChannel(ch.name), grandChild = new Rmap();
-				child.addChild(grandChild);
-				Client.addDataMarkerAction.doAction(grandChild);
-			}
-		}
-***/
-// 2007/04/04  WHF  Experiment
-		// Remove time values.  They will be replaced with the request 
-		//  times.
-		Client.forEachNode(base, Client.removeTimeAction);
-		
-		// Simplify the resulting Rmap:
-		base.collapse();
-		
-		// Add the channels without data:
-		for (int ii=0; ii<channelList.size(); ++ii)
-		{
-			Channel ch=(Channel) channelList.elementAt(ii);
-			if (ch.rmap==null) {    // no data, add channel with data marker
-			    Client.addDataMarkerAction.doAction(base.addChannel(ch.name));
-			}
-		}
-		// Find the new root of the hierarchy:
-		while (base.getParent() != null) base = base.getParent();
-		
-		// Add its children to the data request.
-		while (base.getNchildren()>0)
-		{
-			Rmap tmp=base.getChildAt(0);
-			base.removeChildAt(0);
-			dataReq.addChild(tmp);
-		} 
 
-// 2007/04/04  WHF  Original code continues.
+			// mjm 2/8/05:  this won't let certain registrations to happen?
+
+			    if (doThrow) throw new IllegalArgumentException(
+			        "Illegal mixed request of channels with and without data"); 
+
+			    Client.addDataMarkerAction.doAction(dataReq.addChannel(ch.name));
+			}
+		}
 		clearData();
 		
 		if (dataReq.getNchildren() == 0) throw new IllegalArgumentException(

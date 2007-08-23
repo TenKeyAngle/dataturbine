@@ -11,15 +11,13 @@
 # --------------------------------------------------------------------------------------------------
 # labelBy	id/type/class/alt/latlon/altlatlon/none; any other entry will be treated as the constant label
 # sortBy	id/type/class
-# iconBy	type/class/dot/square/airplane/3d_airplane/none
-# icon_scale	<floating point number greater than zero>
+# iconBy	type/class/dot/square/airplane/none
 # colorBy	type/class/red/green/blue/yellow/purple/aqua; any other entry will be treated as the constant color (must be HEX number in format bbggrr)
 #
 
 labelBy		id
 sortBy		id
 iconBy		type
-iconScale	1.0
 colorBy		class
 
 #

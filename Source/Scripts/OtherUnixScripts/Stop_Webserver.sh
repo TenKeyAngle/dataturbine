@@ -22,7 +22,7 @@ if [ ! ${JAVA_HOME} ]; then
 fi
 
 # Stop Catalina
-cd ../apache-tomcat-*/bin
+cd ../jakarta-tomcat-*/bin
 chmod a+rx *.sh
 ./catalina.sh stop "$@"
 

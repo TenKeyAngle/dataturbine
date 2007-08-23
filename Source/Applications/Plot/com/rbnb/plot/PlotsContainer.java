@@ -83,10 +83,8 @@ public class PlotsContainer extends JComponent implements ActionListener, Compon
 	
    public PlotsContainer(RBNBCubby rbc,PosDurCubby pdc, Environment e) {
         
-        //EMF 4/10/07: use Environment fonts so size can be changed
         // JPW 04/12/2005: Set the font
-	//setFont(new Font("Dialog", Font.PLAIN, 12));
-	setFont(Environment.FONT12);
+	setFont(new Font("Dialog", Font.PLAIN, 12));
         
 	rbnbCubby=rbc;
 	posDurCubby=pdc;
@@ -106,7 +104,6 @@ public class PlotsContainer extends JComponent implements ActionListener, Compon
 	buttons.setLayout(new GridLayout(1,0));	//single row, multiple columns
 	for (int i=0;i<environment.DISPLAYGROUPS;i++) {
 	   button[i]=new JButton(Integer.toString(i+1));
-	   button[i].setFont(Environment.FONT10);
 	   button[i].setBackground(Environment.BGCOLOR);
 	   button[i].addActionListener(this);
 	   buttons.add(button[i]);
@@ -343,8 +340,6 @@ public class PlotsContainer extends JComponent implements ActionListener, Compon
 			}
 		for (int i=0;i<button.length;i++) {
 			if (dgLabel[i]!=null) {
-				//EMF 4/10/07: set Environment font, so size can be changed
-				button[i].setFont(Environment.FONT10);
 				button[i].setText(dgLabel[i]);
 				button[i].invalidate();
 				}
@@ -389,11 +384,7 @@ public class PlotsContainer extends JComponent implements ActionListener, Compon
 //EMF 11/10/05: just use channel name, skip server/source
 String shortname=regChan.name;
 shortname=shortname.substring(shortname.lastIndexOf('/')+1);
-//EMF 4/10/07: set Environment font so size can be changed
-javax.swing.UIManager.put("InternalFrame.titleFont",Environment.FONT12);
 	    JInternalFrame jif=new JInternalFrame(shortname,true,false,true,true);
-	    //EMF 4/10/07: set Environment font, so size can be changed
-            jif.setFont(Environment.FONT10);
 	    //JInternalFrame jif=new JInternalFrame(regChan.name,true,false,true,true);
 		java.net.URL url=this.getClass().getResource("/images/whirligig.gif");
 		if (url!=null) jif.setFrameIcon(new javax.swing.ImageIcon(url));

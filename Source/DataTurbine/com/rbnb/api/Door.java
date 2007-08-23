@@ -41,7 +41,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 08/06/2007  WHF	Added isDebug() static method.  Made id string optional.  
  * 11/17/2003  INB	Added <code>clear</code> method.
  *			<code>java.lang.InterruptedExceptions</code> always
  *			clear out any <code>Locks</code>.  Clear the thread out
@@ -69,8 +68,7 @@ package com.rbnb.api;
  */
 final class Door {
     /**
-     * identification for this <code>Door</code>.  Is only retained if
-     *  isDebug() is true.
+     * identification for this <code>Door</code>.
      * <p>
      *
      * @author Ian Brown
@@ -140,30 +138,6 @@ final class Door {
      * @version 05/10/2001
      */
     final static byte STANDARD = 0;
-    
-    /**
-      * Debug modes.
-      * @author WHF
-      * @version 2007/08/06
-      */
-    private static final int DEBUG_OFF = -1,
-    	DEBUG_ON = 1,
-	DEBUG_UNKNOWN = 0;
-	
-    /**
-      * Current debug setting.
-      * @author WHF
-      * @version 2007/08/06
-      */
-    private static int debugMode = DEBUG_UNKNOWN;
-    
-    /**
-      * String used for identification when debugging is off.
-      * @author WHF
-      * @version 2007/08/06
-      */
-    private static final String ID_DEBUG_OFF = "DEBUG OFF";
-    
 
     /**
      * Class constructor.
@@ -326,11 +300,10 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Made private to control variable scope.     
      * 02/21/2001  INB	Created.
      *
      */
-    private final Lock getPrimaryLock() {
+    final Lock getPrimaryLock() {
 	return (primaryLock);
     }
 
@@ -351,11 +324,10 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Made private to control variable scope.     
      * 02/21/2001  INB	Created.
      *
      */
-    private final com.rbnb.utility.SortedVector getReadLocks() {
+    final com.rbnb.utility.SortedVector getReadLocks() {
 	return (readLocks);
     }
 
@@ -384,26 +356,6 @@ final class Door {
     final byte getTypeOfLock() {
 	return (typeOfLock);
     }
-    
-    /**
-      * True if debugging has been set for this class.  Based on the 
-      * com.rbnb.sapi.Door.debug environment variable.
-      *
-      * @see System#getProperty(String)
-      * @see Boolean#getBoolean(String)
-      */
-    static boolean isDebug() {
-	if (debugMode == DEBUG_UNKNOWN) {
-	    try {
-		debugMode = Boolean.getBoolean("com.rbnb.api.Door.debug")
-			? DEBUG_ON : DEBUG_OFF;
-	    } catch (Throwable t) {
-		debugMode = DEBUG_OFF;
-	    }
-	}
-	return debugMode == DEBUG_ON;
-    }
-    
 
     /**
      * Determines if the primary lock on the door is set.
@@ -609,15 +561,13 @@ final class Door {
 		    synchronized (getReadLocks()) {
 			getReadLocks().add(readLock);
 		    }
-		    releasePrimaryLock();
-		    grabbed = false;		    
-		    /*synchronized (getPrimaryLock()) {
+		    synchronized (getPrimaryLock()) {
 			getPrimaryLock().release();
 			if (getPrimaryLock().count == 0) {
 			    getPrimaryLock().setThread(null);
 			}
 			grabbed = false;
-		    }*/
+		    }
 		}
 
 	    } catch (com.rbnb.utility.SortException e) {
@@ -627,14 +577,12 @@ final class Door {
 	} finally {
 	    if (grabbed) {
 		// Release the primary lock if we got it.
-		releasePrimaryLock();
-		/*synchronized (getPrimaryLock()) {
+		synchronized (getPrimaryLock()) {
 		    getPrimaryLock().release();
 		    if (getPrimaryLock().count == 0) {
 			getPrimaryLock().setThread(null);
 		    }
-		}*/
-
+		}
 	    }
 	}
     }
@@ -719,10 +667,8 @@ final class Door {
 			    Lock readLock = (Lock)
 				getReadLocks().elementAt(idx);
 
-			    // 2007/08/06  WHF  Refactoring; meaning same.	
-			    if (/*readLock.getThread() ==*/
-				readLock.threadEquals(
-				Thread.currentThread())) {
+			    if (readLock.getThread() ==
+				Thread.currentThread()) {
 				// It is legal to have both read and write
 				// locks.
 				++idx;
@@ -771,9 +717,7 @@ final class Door {
 	    }
 
 	    // Grab the primary lock.
-//	    getPrimaryLock().grab(locationI,checkPending,true);  // MJM 2/20/07
-	    getPrimaryLock().grab(locationI,false,true);	// MJM: write locks shouldn't wait on pendingr?,
-								// risks deadlock with read locks that do wait
+	    getPrimaryLock().grab(locationI,checkPending,true);
 	    grabbed = true;
 
 	    // Set the primary lock.
@@ -782,13 +726,12 @@ final class Door {
 	} finally {
 	    // Release the primary lock.
 	    if (grabbed) {
-		releasePrimaryLock();
-		/*synchronized (getPrimaryLock()) {
+		synchronized (getPrimaryLock()) {
 		    getPrimaryLock().release();
 		    if (getPrimaryLock().count == 0) {
 			getPrimaryLock().setThread(null);
 		    }
-		}*/
+		}
 	    }
 	    // Release the pending count.
 	    if (isPending) {
@@ -800,7 +743,7 @@ final class Door {
     /**
      * Nullifies this <code>Door</code>.
      * <p>
-     * This method ensures that all pointers
+     * This method ensures that all pointers in this <code>DataBlock</code>
      * are cleared, reducing the effort needed by the garbage collector to
      * clean it up.
      * <p>
@@ -841,7 +784,7 @@ final class Door {
      * @param identificationI the identification.
      * @see #getIdentification()
      * @since V2.2
-     * @version 08/06/2007
+     * @version 11/12/2003
      */
 
     /*
@@ -849,15 +792,11 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Only sets internal variable if isDebug() is true.
      * 11/12/2003  INB	Created.
      *
      */
     final void setIdentification(String identificationI) {
-	if (isDebug())
-	    identification = identificationI;
-	else
-	    identification = ID_DEBUG_OFF;
+	identification = identificationI;
     }
 
     /**
@@ -877,11 +816,10 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Made private to control variable scope.
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setPrimaryLock(Lock primaryLockI) {
+    final void setPrimaryLock(Lock primaryLockI) {
 	primaryLock = primaryLockI;
     }
 
@@ -902,11 +840,10 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Made private to control variable scope.     
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setReadLocks(com.rbnb.utility.SortedVector readLocksI) {
+    final void setReadLocks(com.rbnb.utility.SortedVector readLocksI) {
 	readLocks = readLocksI;
     }
 
@@ -929,13 +866,10 @@ final class Door {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/13/2007  WHF  Made private so only called from constructor.  In this
-     *     way we know the type of lock cannot change midstream, simplifying
-     *     multithreaded analysis.
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setTypeOfLock(byte typeOfLockI)
+    final void setTypeOfLock(byte typeOfLockI)
 	throws java.lang.InterruptedException
     {
 	lock();
@@ -1000,13 +934,12 @@ final class Door {
 	throws java.lang.InterruptedException
     {
 	if (getTypeOfLock() == STANDARD) {
-	    releasePrimaryLock();
-	    /*synchronized (getPrimaryLock()) {
+	    synchronized (getPrimaryLock()) {
 		getPrimaryLock().release();
 		if (getPrimaryLock().count == 0) {
 		    getPrimaryLock().setThread(null);
 		}
-	    }*/
+	    }
 	} else {
 	    unlockReadWrite();
 	}
@@ -1131,13 +1064,12 @@ final class Door {
 	} finally {
 	    // Release the primary lock.
 	    if (grabbed) {
-		releasePrimaryLock();
-		/*synchronized (getPrimaryLock()) {
+		synchronized (getPrimaryLock()) {
 		    getPrimaryLock().release();
 		    if (getPrimaryLock().count == 0) {
 			getPrimaryLock().setThread(null);
 		    }
-		}*/
+		}
 	    }
 
 	    // Throw the <code>InterruptedException</code> if one happened.
@@ -1145,28 +1077,5 @@ final class Door {
 		throw interruptedException;
 	    }
 	}
-    }
-    
-    /**
-     * Releases the primary lock.
-     * <p>
-     *
-     * @author WHF
-     *
-     * @since V3.0
-     * @version 2007/08/13
-     */
-
-    /*
-     *
-     *   Date      By	Description
-     * MM/DD/YYYY
-     * ----------  --	-----------
-     * 08/13/2007  WHF	Created.
-     *
-     */
-    private final void releasePrimaryLock()
-    {
-	getPrimaryLock().release();
     }
 }

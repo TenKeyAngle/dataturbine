@@ -82,21 +82,7 @@ public boolean SCROLLGRIDLINES=false;
 public int CHANSPERDG=4;
 
 //EMF 11/8/00: now need a constructor
-//EMF 4/10/07: add custom font sizes via java debug flag
 public Environment() {
-  String fontsize=System.getProperty("plot.fontsize","10");
-  if (!fontsize.equals("10")) {
-    try {
-      int size=Integer.parseInt(fontsize);
-      FONT10=new Font("dialog",Font.PLAIN,size);
-      FONT12=new Font("dialog",Font.PLAIN,size+2);
-      FONT12B=new Font("dialog",Font.BOLD,size+2);
-      FONT14=new Font("dialog",Font.PLAIN,size+4);
-      FONT18=new Font("dialog",Font.PLAIN,size+8);
-    } catch (Exception e) {
-      System.err.println("Exception setting custom font size "+fontsize);
-    }
-  }
 }
 
 public void showState() {

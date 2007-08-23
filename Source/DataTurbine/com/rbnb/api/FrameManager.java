@@ -1266,12 +1266,11 @@ abstract class FrameManager
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 08/06/2007  WHF  Reset the private tag.
      * 10/17/2003  INB	Took off the private tag.
      * 02/21/2001  INB	Created.
      *
      */
-    private final void setDoor(Door doorI) {
+    final void setDoor(Door doorI) {
 	door = doorI;
     }
 
@@ -1482,10 +1481,9 @@ abstract class FrameManager
     {
 	boolean updatedR = false;
 
-      if (!getUpToDate()) {  // MJM 2/20/2007: move if{} outside door lock to reduce lock/unlock cycles
 	try {
 	    getDoor().lock("FrameManager.updateRegistration");
-//	    if (!getUpToDate()) {  // MJM
+	    if (!getUpToDate()) {
 		// If the <code>Registration</code> is not up-to-date, then
 		// perform an update on it.
 		if (getRegistered() == null) {
@@ -1503,12 +1501,11 @@ abstract class FrameManager
 
 		// Note that we're now up-to-date.
 		setUpToDate(true);
-//	    }  // MJM
+	    }
 
 	} finally {
 	    getDoor().unlock();
 	}
-      }  // MJM
 
 	return (updatedR);
     }

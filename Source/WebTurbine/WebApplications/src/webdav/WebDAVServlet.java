@@ -82,7 +82,6 @@ import org.apache.catalina.util.XMLWriter;
 // 2005/12/20  WHF  Broke some code into getFile(); uses setContentLength().
 // 2006/01/30  WHF  Added If-Modifed-Since logic.
 // 2006/08/14  WHF  Removed 'uplink' from 'Up one level'; now uses '..'.
-// 2007/04/20  WHF  Added plug-in option parsing.
 //
 
 /**
@@ -315,9 +314,9 @@ if (qs != null) {
 			if (src==null ||
 					!src.VerifyConnection()) { // check to ensure it didn't die
 				src = new Source(
-						conn.reqParam.getCacheSize(),
-						conn.reqParam.getArchiveMode(),
-						conn.reqParam.getArchiveSize());
+					conn.reqParam.getCacheSize(),
+					conn.reqParam.getArchiveMode(),
+					conn.reqParam.getArchiveSize());
 				src.OpenRBNBConnection(
 						defaultProperties.get("hostname").toString(),
 						conn.reqParam.source,
@@ -332,16 +331,8 @@ if (qs != null) {
 					protectSet.add(conn.reqParam.source);
 			} else {
 				// 2005/11/01  WHF  RFC specifies 405 for this error:
-				//res.sendError(res.SC_METHOD_NOT_ALLOWED,
-				//		"Source already exists.");
-				// 2007/06/26  WHF  Even though this is supposed to be illegal,
-				//  we allow it so that the user may change the ring buffer
-				//  settings.
-				src.SetRingBuffer(
-						conn.reqParam.getCacheSize(),
-						conn.reqParam.getArchiveMode(),
-						conn.reqParam.getArchiveSize()
-				);						
+				res.sendError(res.SC_METHOD_NOT_ALLOWED,
+						"Source already exists.");
 				return;
 			}
 		} else { // create subdirectory.
@@ -983,35 +974,6 @@ if (debug) System.err.println(node);
 		finally { recycleConnection(conn); }
 	}		
 	
-	private void parsePlugInOptionStr(String options, ChannelMap cmap)
-	{
-//System.err.println("Parsing: "+options);		
-		// The option string is of the form:
-		// plug-in-name,key1=value1,key2=value2,...,keyn=valuen
-		try {
-			int comma = options.indexOf(','), nextComma;
-			if (comma < 1) return; // no channel
-			String chan = options.substring(0, comma);
-			while (comma != options.length()
-					&& ((nextComma = options.indexOf(',', comma+1)) > 0
-					|| (nextComma = options.length()) != 0)) {
-				int eq = options.indexOf('=', comma+1);
-//System.err.println(chan+": "+options.substring(comma+1, eq)+" = "+options.substring(eq+1, nextComma));
-				
-				if (eq < nextComma)
-					cmap.AddPlugInOption(
-							chan,
-							options.substring(comma+1, eq),
-							options.substring(eq+1, nextComma)
-					);
-				comma = nextComma;
-			}
-		} catch (Exception e) {
-			System.err.println("Error parsing option string: \""+options+"\":");
-			e.printStackTrace();
-		}
-	}
-	
 	private ChannelMap fetch(Connection conn) throws SAPIException
 	{
 		//create new channelmap and add current channel to it, using
@@ -1027,13 +989,6 @@ if (debug) System.err.println(node);
 					c.PutDataAsString(idx, conn.reqParam.requestData[ii]);
 			}
 		}
-		
-		// 2007/04/20  WHF  Add PlugInOptions, if any:
-		String[] opts = conn.reqParam.getPlugInOptions();
-		for (int ii = 0; opts!=null && ii < opts.length; ++ii)
-			parsePlugInOptionStr(opts[ii], c);
-		
-		
 		conn.sink.Request(c, 
 				conn.reqParam.start,
 				conn.reqParam.duration,
@@ -1147,8 +1102,7 @@ if (debug) System.err.println("Last-Modified (data): "+requestDate);
 					res.setContentLength(0);
 				} else {
 					byte arr[] = c.GetData(0);
-					// 2007/06/01  WHF  arr can be null with PlugIns.
-					if (arr == null) arr = new byte[0];   					
+					
 					res.setContentLength(arr.length);
 					
 					if(conn.reqParam.byteorder == ChannelMap.LSB) {
@@ -1467,11 +1421,6 @@ if (debug) System.err.println("registering null channel(s): "+sourceMap);
 				// Remove /RBNB/
 				path = path.substring(
 						conn.reqParam.servlet.length() + 2);
-				// 2007/05/01  WHF  Might be URL encoded:
-				try {
-				path = URLDecoder.decode(path, "UTF-8");
-				} catch (Throwable t) {}
-						
 				String srcStr;
 				int slash = path.indexOf('/');
 				if (slash == -1) {
@@ -1776,10 +1725,8 @@ if (debug) System.err.println("Got: "+conn.cm);
 		generatedXML.writeElement(DN_ALIAS, "href", XMLWriter.OPENING);
 
 		String href = node.getFullName();
+		generatedXML.writeText(urlEncode(href));
 
-		String encoded = urlEncode(href);
-		generatedXML.writeText(encoded);
-		
 		generatedXML.writeElement(DN_ALIAS, "href", XMLWriter.CLOSING);
 
 		String resourceName = node.getName();
@@ -2102,21 +2049,15 @@ if (debug) System.err.println("Got: "+conn.cm);
 		return lockParser.isLocked(path, ifHeader + lockTokenHeader);
 	}
 	
+
 	static String urlEncode(String toEncode)
 	{
 		// RBNB channels will never contain '*', so we use it to trick out
 		//  the URLEncoder class.
-		// 2007/05/01  WHF  Repaired to better handle spaces.
-		toEncode = toEncode.replaceAll("/", "*1");
-		toEncode = toEncode.replaceAll(" ", "*2");
-		
-		try { toEncode = URLEncoder.encode(toEncode, "UTF-8"); 
+		toEncode = toEncode.replace('/', '*');
+		try { URLEncoder.encode(toEncode, "UTF-8"); 
 		} catch (java.io.UnsupportedEncodingException uee) { } // never happen
-		
-		toEncode = toEncode.replaceAll("\\*1", "/");
-		toEncode = toEncode.replaceAll("\\*2", "%20");
-		
-		return toEncode;
+		return toEncode.replace('*', '/');
 	}
 	
 	/**

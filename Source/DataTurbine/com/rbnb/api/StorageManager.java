@@ -35,7 +35,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 06/26/2007  MJM	Fixed bug with flushInterval/1000 in trimbytime mode
  * 10/11/2006  EMF      Added trim by time for flushing and looping.
  * 05/02/2006  EMF      Compress FrameSets when they fill, rather than when
  *                      writing them to archive.  Improves performance.
@@ -1799,13 +1798,13 @@ abstract class StorageManager
                 //System.err.println("StorageManager.trim: tr null!!");
                 return;
               }
-              //System.err.println("ichild: "+i+", set duration: "+duration+", trimInterval: "+trimInterval);
               if (duration>trimInterval) { //need to trim
                 for (int j=0;j<i;j++) removeSet();
                 break;
               }
+              //System.err.println("set duration: "+tr.getDuration());
               if (tr.getDuration()>0) duration+=tr.getDuration();
-              else duration+=flushInterval/1000.; //gotta do something... (MJM 6/26/07:  added /1000 !!)
+              else duration+=flushInterval; //gotta do something...
             }
             //System.err.println("duration "+duration);
           } catch (Exception e) {
@@ -1823,7 +1822,7 @@ abstract class StorageManager
         } //end else
     }
 
-    //EMF: removeSet created since called from two places above
+    //removeSet created since called from two places above
     private void removeSet()
 	throws com.rbnb.api.AddressException,
 	       com.rbnb.api.SerializeException,
@@ -1846,7 +1845,7 @@ abstract class StorageManager
 
 	    try {
 		// Lock the set.
-//		set.getDoor().lock("StorageManager.trim"); // MJM set.clear() locks it anyways
+		set.getDoor().lock("StorageManager.trim");
 
 		// Delete the set.
 		if (set instanceof FileSet) {
@@ -1860,7 +1859,7 @@ abstract class StorageManager
 
 	    } finally {
 		// Unlock the <code>FileSet</code>.
-//		set.getDoor().unlock();		// MJM
+		set.getDoor().unlock();
 	    }
 
 	    if (isMine && (set.getParent() == null)) {

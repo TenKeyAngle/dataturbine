@@ -1,18 +1,11 @@
-/*
-Copyright 2007 Creare Inc.
 
-Licensed under the Apache License, Version 2.0 (the "License"); 
-you may not use this file except in compliance with the License. 
-You may obtain a copy of the License at 
 
-http://www.apache.org/licenses/LICENSE-2.0 
 
-Unless required by applicable law or agreed to in writing, software 
-distributed under the License is distributed on an "AS IS" BASIS, 
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-See the License for the specific language governing permissions and 
-limitations under the License.
-*/
+
+THIS IS THE VERSION OF THE CODE BEFORE ADDING TYPE/CLASSIFICATION COLOR MAPPING
+TO THE CONFIGURATION FILE.
+
+
 
 
 import java.awt.Checkbox;
@@ -43,8 +36,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
@@ -93,7 +84,7 @@ import com.rbnb.utility.Utility;
  *
  * @author John P. Wilson
  *
- * @version 12/01/2006
+ * @version 11/30/2006
  */
 
 /*
@@ -103,9 +94,6 @@ import com.rbnb.utility.Utility;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 12/01/2006  JPW	Clean up how colors are defined and handled:
- *			    - add Hashtable colors
- *			    - change getHexColorStr() to use Hashtable colors
  * 11/30/2006  JPW	Add custom Type and Classification color mapping
  *			support in the config file.
  * 11/27/2006  EMF	Add support for munge-settable display parameter
@@ -158,34 +146,6 @@ import com.rbnb.utility.Utility;
 
 public class TrackKMLPlugIn implements ActionListener, ItemListener {
     
-    // JPW 12/01/2006: Define colors; this is initialized in the constructor
-    private static Hashtable colors = new Hashtable();
-    
-    // JPW 11/30/2006: Color by TYPE
-    private String TYPE_AIR_COLOR;
-    private String TYPE_SPECIAL_POINT_COLOR;
-    private String TYPE_EMERGENCY_POINT_COLOR;
-    private String TYPE_FORWARDED_COLOR;
-    private String TYPE_GROUND_COLOR;
-    private String TYPE_MUNITION_COLOR;
-    private String TYPE_SPACE_COLOR;
-    private String TYPE_REFERENCE_POINT_COLOR;
-    private String TYPE_SURFACE_COLOR;
-    private String TYPE_SUBSURFACE_COLOR;
-    private String TYPE_ELECTRONIC_WARFARE_COLOR;
-    private String TYPE_UNKNOWN_COLOR;
-    private String TYPE_DEFAULT_COLOR;
-    
-    // JPW 11/30/2006: Color by CLASSIFICATION
-    private String CLASS_ASSUMED_FRIEND_COLOR;
-    private String CLASS_FRIEND_COLOR;
-    private String CLASS_HOSTILE_COLOR;
-    private String CLASS_NEUTRAL_COLOR;
-    private String CLASS_PENDING_COLOR;
-    private String CLASS_SUSPECT_COLOR;
-    private String CLASS_UNKNOWN_COLOR;
-    private String CLASS_DEFAULT_COLOR;
-    
     // Channels names returned from TrackPlugIn
     private String altChanName = "Alt";
     private String headingChanName = "Heading";
@@ -235,13 +195,12 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     // No longer have a viewpoint text field
     // private TextField viewpointElevationOffsetTF = null;
     
-    // For requests that have sub-tracks, give a "consolidated" response?
-    // A consolidated response is a single KML document which contains track
-    // data for all of the known tracks. If this is false, then in response to
-    // a top-level request we will provide a KML which has a series of
-    // NetworkLinks (one for each track).
+    // This pertains to top-level requests only (requests that have
+    // subtracks); give a "consolidated" response, that is, a single
+    // KML document which contains track data for all of the known tracks.
+    // If this is false, then in response to a top-level request we will
+    // provide a KML which has a series of NetworkLinks - one for each track.
     private boolean bConsolidatedResponse = false;
-    
     private Vector iconsUsed=null;
     
     // Store the track names
@@ -269,14 +228,11 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     //     specified in the GUI.  If the user's request doesn't override any
     //     values via a munge, then these are the values that will be used to
     //     fulfill the request.
-    private String constantLabel = "FlightTrack";
-    private String constantLabelG = "FlightTrack";
-    private String constantColor;
-    private String constantColorG;
-    // This is the label string for the custom color menu item; note that this
-    // string will be a valid 6-digit HEX number (bbggrr) but *will not*
-    // include the prepended "ff" opacity indicator.
-    private String constantColorMenuLabel;
+    private String constantLabel = "FlightTrack"; //no label
+    private String constantLabelG = "FlightTrack"; //no label
+    private String constantColor = "0000ff";
+    private String constantColorG = "0000ff";
+    private String enteredColor = "0000ff";
     private String colorFromConfigFile = "";
     private int previousColorByIndex = 0; //last selection on menu, for undos
     private int previousLabelByIndex = 0; //last selection on menu, for undos
@@ -295,9 +251,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     
     private String configFile = "TrackResources/KMLConfig.txt";
     private String iconsDirectory = "TrackResources/icons/";
-    
-    // The frame won't be initialized if user has specified "-g" flag (no GUI)
     private boolean showGUI = true;
+    // The frame won't be initialized if user has specified "-g" flag (no GUI)
     private Frame frame = null;
     private Choice[] choice=null;
     private Checkbox checkbox=null;
@@ -354,57 +309,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     
     public TrackKMLPlugIn(String[] args) {
 	
-	// Initialize the Hashtable of colors
-	// Colors have a prepended "ff" indicating opaque presentation
-	// The remaining 6-digits in the hex color are: bbggrr
-	colors.put("black","ff000000");
-	colors.put("white","ffffffff");
-	colors.put("blue","ffff0000");
-	colors.put("green","ff00ff00");
-	colors.put("red","ff0000ff");
-	colors.put("yellow","ff00ffff");
-	colors.put("purple","ffff00ff");
-	colors.put("orange","ff0099ff");
-	colors.put("dark green","ff006600");
-	colors.put("dark purple","ff990099");
-	colors.put("dark orange","ff0066ff");
-	colors.put("aqua","ffffff00");
-	colors.put("blue aqua","ffffba00");
-	colors.put("dark aqua","ff999900");
-	colors.put("pink","ffb469ff");
-	
-	// Set Type colors
-	TYPE_AIR_COLOR = getHexColorStr("blue");
-	TYPE_SPECIAL_POINT_COLOR = getHexColorStr("green");
-	TYPE_EMERGENCY_POINT_COLOR = getHexColorStr("red");
-	TYPE_FORWARDED_COLOR = getHexColorStr("purple");
-	TYPE_GROUND_COLOR = getHexColorStr("orange");
-	TYPE_MUNITION_COLOR = getHexColorStr("dark green");
-	TYPE_SPACE_COLOR = getHexColorStr("dark orange");
-	TYPE_REFERENCE_POINT_COLOR = getHexColorStr("yellow");
-	TYPE_SURFACE_COLOR = getHexColorStr("dark purple");
-	TYPE_SUBSURFACE_COLOR = getHexColorStr("blue aqua");
-	TYPE_ELECTRONIC_WARFARE_COLOR = getHexColorStr("dark aqua");
-	TYPE_UNKNOWN_COLOR = getHexColorStr("white");
-	TYPE_DEFAULT_COLOR = getHexColorStr("pink");
-	
-	// Set Classification colors
-	CLASS_ASSUMED_FRIEND_COLOR = getHexColorStr("aqua");
-	CLASS_FRIEND_COLOR = getHexColorStr("aqua");
-	CLASS_HOSTILE_COLOR = getHexColorStr("red");
-	CLASS_NEUTRAL_COLOR = getHexColorStr("green");
-	CLASS_PENDING_COLOR = getHexColorStr("yellow");
-	CLASS_SUSPECT_COLOR = getHexColorStr("red");
-	CLASS_UNKNOWN_COLOR = getHexColorStr("yellow");
-	CLASS_DEFAULT_COLOR = getHexColorStr("orange");
-	
-	// Set default constant color selection
-	constantColor = getHexColorStr("red");
-	constantColorG = getHexColorStr("red");
-	// "constantColorMenuLabel" should only be the 6-digit HEX color;
-	// initialize it by taking off the leading "ff" opacity specifier
-	// from "constantColor"
-	constantColorMenuLabel = constantColor.substring(2);
+	//EMF 4/11/06: no need since no longer Frame extension
+	//super("KML PlugIn");
 	
 	System.err.println("\n");
 	
@@ -837,38 +743,40 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		choice[3].select("by Type");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("red")) ) {
 		choice[3].select("Red");
-		constantColorG = getHexColorStr("red");
+		constantColorG="0000ff";
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("green")) ) {
 		choice[3].select("Green");
-		constantColorG = getHexColorStr("green");
+		constantColorG="00ff00";
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("blue")) ) {
 		choice[3].select("Blue");
-		constantColorG = getHexColorStr("blue");
+		constantColorG="ff0000";
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("yellow")) ) {
 		choice[3].select("Yellow");
-		constantColorG = getHexColorStr("yellow");
+		constantColorG="00ffff";
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("purple")) ) {
 		choice[3].select("Purple");
-		constantColorG = getHexColorStr("purple");
+		constantColorG="ff00ff";
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("aqua")) ) {
 		choice[3].select("Aqua");
-		constantColorG = getHexColorStr("aqua");
+		constantColorG="ffff00";
 	    } else if (colorByG == CONSTANT) {
 		// See if the user has entered a valid color
-		String tempConstantColorG = getHexColorStr(colorFromConfigFile);
-		if (tempConstantColorG != null) {
-		    constantColorG = tempConstantColorG;
-		    // Remove the leading "ff" opacity specification for the
-		    // color string before showing it on the menu
-		    constantColorMenuLabel = constantColorG.substring(2);
+		try {
+		    if (colorFromConfigFile.length() != 6) {
+			throw new Exception();
+		    }
+		    int val = Integer.parseInt(colorFromConfigFile,16);
+		    //if get here, things are ok
+		    constantColorG = colorFromConfigFile;
+		    enteredColor = colorFromConfigFile;
 		    int menuInt = 6;
 		    if (showTactical) {
 			menuInt = 8;
 		    }
-		    choice[3].insert(constantColorMenuLabel,menuInt);
+		    choice[3].insert(constantColorG,menuInt);
 		    choice[3].select(menuInt);
-		} else {
-		    // User did not enter a valid color in config file;
+		} catch (Exception e) {
+		    // User must not have entered a valid color in config file;
 		    // use the default
 		    if (showTactical) {
 			colorByG = CLASSIFICATION;
@@ -880,7 +788,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    } else {
 			colorByG = CONSTANT;
 			choice[3].select("Red");
-			constantColorG = getHexColorStr("red");
+			constantColorG="0000ff";
 			System.err.println(
 			    "User made an unrecognizable color selection: " +
 			    colorFromConfigFile +
@@ -894,8 +802,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    choice[3].select("by Class");
 		} else {
 		    colorByG = CONSTANT;
+		    constantColorG="0000ff"; //red
 		    choice[3].select("Red");
-		    constantColorG = getHexColorStr("red");
 		}
 	    }
 	    
@@ -947,8 +855,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      * 11/28/2006  JPW  Change String comparison method from equals() to
      *                  equalsIgnoreCase(); add alt/latlon/altlatlon support
      *                  to Label field.
-     * 11/30/2006  JPW	Read Type and Classification color mapping from
-     *			config file.
      */
     
     private void readConfigFile() throws Exception {
@@ -966,7 +872,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	        getClass().getClassLoader().getResourceAsStream(configFile);
 	    if (inStream == null) {
 		throw new Exception(
-		    "\n\nConfiguration file, \"" + configFile + "\", could not be found.\n");
+		    "Channel name file could not be found.");
 	    }
 	    bufferedReader =
 	        new BufferedReader( new InputStreamReader(inStream) );
@@ -1084,73 +990,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    }
 	}
 	
-	// JPW 11/30/2006: Type color mapping parameters
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_AIR_COLOR"))) != null ) {
-	    TYPE_AIR_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_SPECIAL_POINT_COLOR"))) != null ) {
-	    TYPE_SPECIAL_POINT_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_EMERGENCY_POINT_COLOR"))) != null ) {
-	    TYPE_EMERGENCY_POINT_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_FORWARDED_COLOR"))) != null ) {
-	    TYPE_FORWARDED_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_GROUND_COLOR"))) != null ) {
-	    TYPE_GROUND_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_MUNITION_COLOR"))) != null ) {
-	    TYPE_MUNITION_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_SPACE_COLOR"))) != null ) {
-	    TYPE_SPACE_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_REFERENCE_POINT_COLOR"))) != null ) {
-	    TYPE_REFERENCE_POINT_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_SURFACE_COLOR"))) != null ) {
-	    TYPE_SURFACE_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_SUBSURFACE_COLOR"))) != null ) {
-	    TYPE_SUBSURFACE_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_ELECTRONIC_WARFARE_COLOR"))) != null ) {
-	    TYPE_ELECTRONIC_WARFARE_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_UNKNOWN_COLOR"))) != null ) {
-	    TYPE_UNKNOWN_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("TYPE_DEFAULT_COLOR"))) != null ) {
-	    TYPE_DEFAULT_COLOR = temp;
-	}
-	
-	// JPW 11/30/2006: Classification color mapping parameters
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_ASSUMED_FRIEND_COLOR"))) != null ) {
-	    CLASS_ASSUMED_FRIEND_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_FRIEND_COLOR"))) != null ) {
-	    CLASS_FRIEND_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_HOSTILE_COLOR"))) != null ) {
-	    CLASS_HOSTILE_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_NEUTRAL_COLOR"))) != null ) {
-	    CLASS_NEUTRAL_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_PENDING_COLOR"))) != null ) {
-	    CLASS_PENDING_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_SUSPECT_COLOR"))) != null ) {
-	    CLASS_SUSPECT_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_UNKNOWN_COLOR"))) != null ) {
-	    CLASS_UNKNOWN_COLOR = temp;
-	}
-	if ( (temp = getHexColorStr((String)hashtable.get("CLASS_DEFAULT_COLOR"))) != null ) {
-	    CLASS_DEFAULT_COLOR = temp;
-	}
-	
 	// "label_chan"
 	temp = (String)hashtable.get("label_chan");
 	if ( (temp != null) &&
@@ -1188,70 +1027,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     }
     
     /**************************************************************************
-     * Return the predefined HEX number for the given color string.
-     * <p>
-     * If the given string is not one of the predefined colors, then
-     * see if it is a valid HEX color code.
-     * <p>
-     * Return null on any error.
-     * <p>
-     *
-     * @author John P. Wilson
-     *
-     * @version 12/01/2006
-     */
-    
-    /*
-     *
-     *   Date      By	Description
-     * MM/DD/YYYY
-     * ----------  --	-----------
-     * 12/01/2006  JPW  Created.
-     *
-     */
-    
-    private String getHexColorStr(String colorStrI) {
-	
-	// FIREWALL
-	if ( (colorStrI == null) || (colorStrI.trim().equals("")) ) {
-	    return null;
-	}
-	
-	String colorStr = colorStrI.trim();
-	
-	// See if the given string is one of our predefined colors
-	String hexStr = (String)colors.get(colorStr);
-	if ( (hexStr != null) && (hexStr.length() == 8) ) {
-	    return hexStr;
-	}
-	
-	// The given string wasn't one of our predefined colors; see if it is a
-	// valid HEX color code.  If it is, then prepend it with "ff" to
-	// indicate opaque presentation in Google Earth.
-	// The 6-digit HEX color number will be interpreted by Google Earth as
-	// bbggrr.
-	if ( (colorStr.length() == 6)    &&
-	     (colorStr.charAt(0) != '-') &&
-	     (colorStr.charAt(0) != '+') )
-	{
-	    try {
-		int val = Integer.parseInt(colorStr,16);
-		// The input string represents a 6-digit HEX number!
-		// Prepend with "ff" to indicate opaque presentation.
-		return new String("ff" + colorStr);
-	    } catch (Exception e) {
-		// Nothing to do
-	    }
-	}
-	
-	System.err.println(
-	    "Warning: could not interpret color \"" + colorStr + "\"");
-	
-	return null;
-	
-    }
-    
-    /**************************************************************************
      * Respond to user actions.
      * <p>
      *
@@ -1270,6 +1045,11 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      */
     
     public void actionPerformed(ActionEvent event) {
+	
+	// As of 11/23/2005, the only two action callbacks that would be
+	// possible are:
+	//    1. File=>Exit menu
+	//    2. User hits "Enter" key while in the elevation textfield
 	
 	String label = event.getActionCommand();
 	
@@ -1363,60 +1143,49 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    else if (choice[3].getSelectedItem().equals("by Class")) colorByG = CLASSIFICATION;
 	    else if (choice[3].getSelectedItem().equals("Red")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("red");
+		constantColorG="0000ff";
 	    } else if (choice[3].getSelectedItem().equals("Green")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("green");
+		constantColorG="00ff00";
 	    } else if (choice[3].getSelectedItem().equals("Blue")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("blue");
+		constantColorG="ff0000";
 	    } else if (choice[3].getSelectedItem().equals("Yellow")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("yellow");
+		constantColorG="00ffff";
 	    } else if (choice[3].getSelectedItem().equals("Purple")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("purple");
+		constantColorG="ff00ff";
 	    } else if (choice[3].getSelectedItem().equals("Aqua")) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr("aqua");
-	    } else if (choice[3].getSelectedItem().equals(constantColorMenuLabel)) {
+		constantColorG="ffff00";
+	    } else if (choice[3].getSelectedItem().equals(enteredColor)) {
 		colorByG = CONSTANT;
-		constantColorG = getHexColorStr(constantColorMenuLabel);
+		constantColorG = enteredColor;
 	    } else if (choice[3].getSelectedItem().equals("<Custom>")) {
 		JOptionPane jop=new JOptionPane();
-		String temp =
-		    jop.showInputDialog(
-			frame,
-			"Enter the color in hex as bbggrr.",
-			constantColorMenuLabel);
+		String temp=jop.showInputDialog(frame,"Enter the color in hex as bbggrr.",enteredColor);
 		if (temp==null) { //user hit cancel; return to previous state
 		    choice[3].select(previousColorByIndex);
 		} else {
-		    // See if the user has entered a valid color
-		    String tempConstantColorG = getHexColorStr(temp);
-		    if (tempConstantColorG != null) {
-			constantColorG = tempConstantColorG;
-			// Remove the leading "ff" opacity specification for
-			// the color string before showing it on the menu
-			constantColorMenuLabel = constantColorG.substring(2);
+		    try {
+			//check that input is sane
+			if (temp.length()!=6) throw new Exception();
+			int val=Integer.parseInt(temp,16);
+			//if get here, things are ok
+			constantColorG=temp;
+			enteredColor=temp;
 			int place=choice[3].getSelectedIndex();
 			if (!choice[3].getItem(place-1).equals("Aqua")) {
-			    // There is an existing custom color menu item;
-			    // remove it before adding the new one
 			    place--;
 			    choice[3].remove(place);
 			}
-			choice[3].insert(constantColorMenuLabel,place);
+			choice[3].insert(constantColorG,place);
 			choice[3].select(place);
 			colorByG = CONSTANT;
-		    } else {
-			// pop error dialog, return to previous state
+		    } catch (Exception e) { //pop error dialog, return to previous state
 			choice[3].select(previousColorByIndex);
-			jop.showMessageDialog(
-			    frame,
-			    "Color must be 6 hex digits.",
-			    "Invalid color specified",
-			    JOptionPane.ERROR_MESSAGE);
+			jop.showMessageDialog(frame,"Color must be 6 hex digits.","Invalid color specified",JOptionPane.ERROR_MESSAGE);
 		    }
 		}
 	    }
@@ -1711,36 +1480,33 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 			else if (kmlColor.equalsIgnoreCase("Class")) colorBy=CLASSIFICATION;
 			else if (kmlColor.equalsIgnoreCase("Red")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("red");
+			    constantColor="0000ff";
 			} else if (kmlColor.equalsIgnoreCase("Green")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("green");
+			    constantColor="00ff00";
 			} else if (kmlColor.equalsIgnoreCase("Blue")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("blue");
+			    constantColor="ff0000";
 			} else if (kmlColor.equalsIgnoreCase("Yellow")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("yellow");
+			    constantColor="00ffff";
 			} else if (kmlColor.equalsIgnoreCase("Purple")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("purple");
+			    constantColor="ff00ff";
 			} else if (kmlColor.equalsIgnoreCase("Aqua")) {
 			    colorBy = CONSTANT;
-			    constantColor = getHexColorStr("aqua");
-			} else {
-			    // See if the user has specified a valid color
-			    // First, decode the string (useful, for example,
-			    // for converting "dark%20green" to "dark green")
+			    constantColor="ffff00";
+			} else { //check if legit color
 			    try {
-				kmlColor = URLDecoder.decode(kmlColor,"UTF-8");
-			    } catch (UnsupportedEncodingException uee) {
-				// Nothing to do
-			    }
-			    String tempConstantColor=getHexColorStr(kmlColor);
-			    if (tempConstantColor != null) {
+				// Make sure the specified color has only 6 characters
+				if (kmlColor.length() != 6) {
+				    throw new Exception();
+				}
+				int val=Integer.parseInt(kmlColor,16);
+				//if get here, color is legit
 				colorBy = CONSTANT;
-				constantColor = tempConstantColor;
-			    }
+				constantColor = kmlColor;
+			    } catch (Exception e) {}
 			}
 		    }
 		    String kmlCurtain = kvh.get("KmlCurtain");
@@ -2198,7 +1964,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      * @param referenceI	   Request reference (newest, oldest, absolute)
      * @param pseudoAltChanIdxI    Index of the pseudo-alt channel (or -1 if there is none)
      *
-     * @version 12/19/2006
+     * @version 10/11/2006
      */
     
     /*
@@ -2206,8 +1972,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 12/19/2006  JPW  For pseudo-alt, no longer use a hardwired heading=0
-     *			or hardwired icon=red dot.
      * 10/11/2006  JPW	Add support for pseudo-alt - display a track for
      *			pAlt, and if using a constant offset then also include
      *			a track at constant elevation to show the offset.
@@ -2373,9 +2137,9 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	StringBuffer kmlSB = new StringBuffer(1000);
 	
 	//EMF 2/9/06: get label, icon, color
-	String trackLabel = getLabel("Alt",alt[numPts - 1],lat[numPts - 1],lon[numPts - 1],false);
-	String[] icon = getIcon();
-	String color = getColor();
+	String trackLabel = getLabel("Alt",alt[numPts - 1],lat[numPts - 1],lon[numPts - 1],false); //trackname
+	String[] icon = getIcon(); // "http://localhost/auto.png";
+	String color = getColor(); //"ffff00ff"; 
 	String styleID = "trackStyle" + trackName + color;
 	double heading = 0.0;
 	try {
@@ -2394,6 +2158,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    
 	    kmlSB.append(
 		"<Placemark id=\"" + trackName + "\">\n" +
+		
+		
 		"<Style id=\"" + styleID + "\">\n" +
 		"<LineStyle>\n" +
 		"<color>" + color + "</color>\n" +
@@ -2402,7 +2168,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		// JPW 04/17/2006: Turn on extrusion at Larry's request; the following specifies the curtain color
 		"<PolyStyle>\n" +
 		"<color>7f00007f</color>\n" +
-		"</PolyStyle>\n" +
+		"</PolyStyle>\n");
+	    kmlSB.append(
 		"<IconStyle>\n" +
 		"<heading>" + heading + "</heading>\n" +
 		"<Icon>\n");
@@ -2656,25 +2423,13 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    "<color>7f00007f</color>\n" +
 	    "</PolyStyle>\n" +
 	    "<IconStyle>\n" +
-	    // JPW 12/19/2006: Don't use hard-wired heading or icon
-	    // "<heading>0.0</heading>\n" +
-	    // "<Icon>\n" +
-	    // "<href>root://icons/palette-4.png</href>\n" +
-	    // "<x>32</x>\n" +
-	    // "<y>32</y>\n" +
-	    // "<w>32</w>\n" +
-	    // "<h>32</h>\n" +
-	    "<heading>" + heading + "</heading>\n" +
-	    "<Icon>\n");
-	if (icon[0]!=null) {
-	    kmlSB.append(
-		"<href>" + icon[0] + "</href>\n" +
-		"<x>" + icon[1] + "</x>\n" +
-		"<y>" + icon[2] + "</y>\n" +
-		"<w>32</w>\n" +
-		"<h>32</h>\n");
-	}
-	kmlSB.append(
+	    "<heading>0.0</heading>\n" +
+	    "<Icon>\n" +
+	    "<href>root://icons/palette-4.png</href>\n" +
+	    "<x>32</x>\n" +
+	    "<y>32</y>\n" +
+	    "<w>32</w>\n" +
+	    "<h>32</h>\n" +
 	    "</Icon>\n" +
 	    "</IconStyle>\n" +
 	    "</Style>\n");
@@ -3319,18 +3074,18 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	
 	return label;
     }
-    
+        
     /**************************************************************************
      * Return appropriate color for track.
      * <p>
-     * Color is chosen by ID, Type, Classification, or Constant and includes
-     * the "ff" prefix which denotes opaque presentation.
+     * Color is chosen by Type, or by Classification, and includes the
+     * "ff" prefix which denotes opaque presentation.
      * Which attribute controls color is set by int constants, defined above,
      * which are selected by the GUI.
      *
      * @author Eric M. Friets
      *
-     * @version 12/01/2006
+     * @version 02/09/2006
      */
     
     /*
@@ -3338,76 +3093,55 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 12/01/2006  JPW  Add check before returning the color to make sure it
-     *			isn't null.
-     *			Don't prepend "ff" to constantColor here; this has
-     *			already been done by the time we reach this method.
      * 02/09/2006  EMF  Created.
      *
-     */
+     */    
     private String getColor() {
-	
 	String color = new String();
-	
 	switch (colorBy) {
 	    case ID:
-	    	color = getHexColorStr("red");
+	    	color="ff0000ff"; //red
 	    	break;
 		
 	    case TYPE: //default values from JADE Types window (except Unknown and no match)
-	        // JPW 11/30/2006: Use color mapping
-	    	if (type.equals("Air")) color = TYPE_AIR_COLOR;
-		else if (type.equals("Special Point")) color = TYPE_SPECIAL_POINT_COLOR;
-		else if (type.equals("Emergency Point")) color = TYPE_EMERGENCY_POINT_COLOR;
-		else if (type.equals("Forwarded")) color = TYPE_FORWARDED_COLOR;
-		else if (type.equals("Ground")) color = TYPE_GROUND_COLOR;
-		else if (type.equals("Munition")) color = TYPE_MUNITION_COLOR;
-		else if (type.equals("Space")) color = TYPE_SPACE_COLOR;
-		else if (type.equals("Reference Point")) color = TYPE_REFERENCE_POINT_COLOR;
-		else if (type.equals("Surface")) color = TYPE_SURFACE_COLOR;
-		else if (type.equals("Sub-surface")) color = TYPE_SUBSURFACE_COLOR;
-		else if (type.equals("Electronic Warfare")) color = TYPE_ELECTRONIC_WARFARE_COLOR;
-		else if (type.equals("Unknown")) color = TYPE_UNKNOWN_COLOR;
-		else color = TYPE_DEFAULT_COLOR;
+	    	if (type.equals("Air")) color="ffff0000"; //blue
+		else if (type.equals("Special Point")) color="ff00ff00"; //green
+		else if (type.equals("Emergency Point")) color="ff0000ff"; //red
+		else if (type.equals("Forwarded")) color="ffff00ff"; //purple
+		else if (type.equals("Ground")) color="ff0099ff"; //orange
+		else if (type.equals("Munition")) color="ff006600"; //dark green
+		else if (type.equals("Space")) color="ff0066ff"; //dark orange
+		else if (type.equals("Reference Point")) color="ff00ffff"; //yellow
+		else if (type.equals("Surface")) color="ff990099"; //dark purple
+		else if (type.equals("Sub-surface")) color="ffffba00"; //blue aqua
+		else if (type.equals("Electronic Warfare")) color="ff999900"; //dark aqua
+		else if (type.equals("Unknown")) color="ffffffff"; //white
+		else color="ffff00ff"; //pink
 		break;
 		
 	    case CLASSIFICATION: //default values from JADE Classifications window (except no match)
-	    	if (classification.equals("Assumed Friend")) color = CLASS_ASSUMED_FRIEND_COLOR;
-	    	else if (classification.equals("Friend")) color = CLASS_FRIEND_COLOR;
-	    	else if (classification.equals("Hostile")) color = CLASS_HOSTILE_COLOR;
-	    	else if (classification.equals("Neutral")) color = CLASS_NEUTRAL_COLOR;
-		else if (classification.equals("Pending")) color = CLASS_PENDING_COLOR;
-	    	else if (classification.equals("Suspect")) color = CLASS_SUSPECT_COLOR;
-	    	else if (classification.equals("Unknown")) color = CLASS_UNKNOWN_COLOR;
-		else color = CLASS_DEFAULT_COLOR;
+	    	if (classification.equals("Assumed Friend")) color="ffffff00"; //aqua
+	    	else if (classification.equals("Friend")) color="ffffff00"; //aqua
+	    	else if (classification.equals("Hostile")) color="ff0000ff"; //red
+	    	else if (classification.equals("Neutral")) color="ff00ff00"; //green
+		else if (classification.equals("Pending")) color="ff00ffff"; //yellow
+	    	else if (classification.equals("Suspect")) color="ff0000ff"; //red
+	    	else if (classification.equals("Unknown")) color="ff00ffff"; //yellow
+		else color="ff0099ff"; //orange
 		break;
 		
 	    case CONSTANT:
-	        // JPW 12/01/2006: Don't prepend "ff" to constantColor here;
-		//                 this has already been done by the time we
-		//                 reach this method.
-	    	// color = "ff"+constantColor;
-		color = constantColor;
+	    	color = "ff"+constantColor;
 		break;
 	    	
+	    //case ELEVATION:
 	    default:
-	    	color = getHexColorStr("red");
+	    	color = "ff0000ff"; //red
 	}
-	
-	// JPW 12/01/2006: Add check if color is null
-	if ( (color == null)           ||
-	     (color.trim().equals("")) ||
-	     (color.length() != 8) )
-	{
-	    System.err.println(
-		"WARNING: color not found; using default color (red)");
-	    // Set default color: red
-	    color = getHexColorStr("red");
-	}
-	
+		
 	return color;
     }
-    
+        
     /**************************************************************************
      * Return appropriate icon for track.
      * <p>
@@ -3428,15 +3162,9 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      * ----------  --	-----------
      * 02/09/2006  EMF  Created.
      *
-     */
+     */    
     private String[] getIcon() {
-	
-	// Content of the icon array:
-	// icon[0] = pallete
-	// icon[1] = x-offset
-	// icon[2] = y-offset
-	String[] icon = new String[3];
-	
+	String[] icon = new String[3]; //0=pallete, 1=x offset, 2=y offset
 	switch (iconBy) {
 	    case TYPE:
 		if (type.equals("Air")) {
@@ -3444,29 +3172,29 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    icon[1]="0";
 		    icon[2]="0";
 		} else if (type.equals("Space")) {
-		    icon[0]=iconsDirectory + "Missile.png";
-		    icon[1]="0";
-		    icon[2]="0";
+		    icon[0]=iconsDirectory + "Missile.png";//"root://icons/palette-4.png"; //arrowhead
+		    icon[1]="0";//"128";
+		    icon[2]="0";//"32";
 		} else if (type.equals("Ground")) {
-		    icon[0]=iconsDirectory + "Truck.png";
-		    icon[1]="0";
-		    icon[2]="0";
+		    icon[0]=iconsDirectory + "Truck.png";//"root://icons/palette-4.png"; //car
+		    icon[1]="0";//"224";
+		    icon[2]="0";//"128";
 		} else if (type.equals("Surface")) {
-		    icon[0]=iconsDirectory + "Boat.png";
-		    icon[1]="0";
-		    icon[2]="0";
+		    icon[0]=iconsDirectory + "Boat.png";//"root://icons/palette-3.png"; //compass
+		    icon[1]="0";//"128";
+		    icon[2]="0";//"128";
 		} else if (type.equals("Sub-surface")) {
-		    icon[0]=iconsDirectory + "Submarine.png";
-		    icon[1]="0";
-		    icon[2]="0";
+		    icon[0]=iconsDirectory + "Submarine.png";//"root://icons/palette-3.png"; //compass
+		    icon[1]="0";//"128";
+		    icon[2]="0";//"128";
 		} else if (classification.equals("Unknown")) {
 		    icon[0]="root://icons/palette-5.png"; // "U" for Unknown
 		    icon[1]="128";
 		    icon[2]="128";
 		} else {
-		    icon[0]="root://icons/palette-2.png"; //airplane
-		    icon[1]="0";
-		    icon[2]="0";
+		    icon[0]="root://icons/palette-2.png"; //airplane "root://icons/palette-4.png"; //arrowhead
+		    icon[1]="0";//"128";
+		    icon[2]="0";//"32";
 		}
 		break;
 		
@@ -3535,17 +3263,9 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		icon[1]="0";
 		icon[2]="0";
 	}
-	
-	if ( (icon[0] != null) &&
-	     (!iconsUsed.contains(icon[0])) &&
-	     (!icon[0].startsWith("root")) )
-	{
-	    iconsUsed.add(icon[0]);
-	}
-	
+	if ((icon[0]!=null)&&(!iconsUsed.contains(icon[0]))&&(!icon[0].startsWith("root"))) iconsUsed.add(icon[0]);
 	return icon;
-	
-    }
+    } //end method getIcon
 
 }
 

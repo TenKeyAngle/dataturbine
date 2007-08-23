@@ -41,10 +41,8 @@ public class PlotTitle extends JComponent {
    private String ordUnits=new String("");
    private boolean newOrdUnits=false;
    private int stringOffset;
-   //EMF 4/10/07: use Environment fonts so size can be changed
-   //private Font f = new Font("Dialog",Font.PLAIN,10);
-   private Font f = Environment.FONT10;
-   private FontMetrics fm = getFontMetrics(f);
+   private Font f = new Font("Dialog",Font.PLAIN,10);
+	private FontMetrics fm = getFontMetrics(f);
    private Image bufferImage = null;
 
    public PlotTitle(String title) {
@@ -103,7 +101,7 @@ public class PlotTitle extends JComponent {
       if (newSize||newOrd) {
 			if (newSize) bufferImage=createImage(size.width,size.height);
 			//if (newSize) bufferImage=new java.awt.image.BufferedImage(size.width,size.height,java.awt.image.BufferedImage.TYPE_INT_RGB);
-//System.err.println("PlotTitle.paint: bufferImage "+bufferImage);
+System.err.println("PlotTitle.paint: bufferImage "+bufferImage);
 			Graphics bi=bufferImage.getGraphics();
 			if (!newSize) bi.clearRect(0,0,size.width-1,size.height-1);
 			bi.setFont(f);

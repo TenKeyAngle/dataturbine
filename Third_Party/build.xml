@@ -2,12 +2,7 @@
      By:   Ian Brown
      Date: 06/18/2004
 
-     Modified:
-         EMF 12/08/2005: added Java1.4 Tomcat compatibility file
-         JPW 08/20/2007: Third_Party directory has been moved out of the
-	                 Source directory (it now resides at the top level
-			 alongside Source).  Therefore, in this build file,
-			 I had to change how to find definitions.xml.
+     Modified: EMF 12/08/2005: added Java1.4 Tomcat compatibility file
 
      Description:
          This file is the primary Ant build file for the third party
@@ -17,10 +12,7 @@
 <project name="THIRD_PARTY" default="library" basedir=".">
 
  <!-- Import the standard definitions (properties). -->
- <!-- JPW 08/20/2007: Since Third_Party has been moved out of the Source -->
- <!--                 directory, changed where to find definitions.xml   -->
- <!-- import file="../definitions.xml" /-->
- <import file="../Source/definitions.xml" />
+ <import file="../definitions.xml" />
 
  <!-- Library directory. -->
  <property name="rbnb.thirdpartylibdir"

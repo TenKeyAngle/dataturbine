@@ -103,13 +103,9 @@ public class ToStringPlugIn {
 				int idx=picm.GetIndex(chan);
 				if (idx==-1) idx=picm.Add(chan);
 				// if registration, may need to make new xml metadata for RBNBdav
-//	if (picm.GetRequestReference().equals("registration")) System.err.println("ToStringPlugIn, got registration request, Mime: "+cm.GetMime(i)+", Type: "+cm.GetType(i)+", Data: "+new String(cm.GetData(i)));		// MJM DEBUG
-
-				if (picm.GetRequestReference().equals("registration")
-					) {		// just send generic header to avoid problems MJM 8/9/07
-//					&& cm.GetMime(i).equals("text/xml") &&
-//					&& "text/xml".equals(cm.GetMime(i)) &&     	// MJM reverse to avoid potential null-ptr
-//					&& cm.GetType(i)==ChannelMap.TYPE_STRING) {
+				if (picm.GetRequestReference().equals("registration") &&
+					cm.GetMime(i).equals("text/xml") &&
+					cm.GetType(i)==ChannelMap.TYPE_STRING) {
 					String result=
 							"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
 							+"<!DOCTYPE rbnb>\n"

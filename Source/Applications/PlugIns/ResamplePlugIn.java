@@ -21,9 +21,6 @@ limitations under the License.
 	
 	---  History  ---
 	2007/01/15  WHF  Created.
-	2007/04/04  WHF  Added dynamic options.
-	2007/08/15  WHF  Changed the meaning of 'maxSamples' so that it is an 
-		aggregate across all channels.  Then commented it.
 */
 
 import com.rbnb.sapi.ChannelMap;
@@ -39,11 +36,6 @@ import java.lang.reflect.Array;
   * Adjusts the sample rate of a time-series RBNB channel.
   *  Note that it has no package.  This is to be consistent with other
   *  RBNB plug-ins.
-  *
-  * <p>Supports the following dynamic options:
-  *  minDecimation = integer  Sets the minimum decimation factor.
-  *  maxSamples = integer     Sets the maximum number of samples.
-  *  antiAlias = boolean      Activates or deactivates the anti-aliasing filter.
   */
 public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 {
@@ -52,8 +44,7 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 	
 //*******************************  Accessors  *******************************//
 	/**
-	  * Get the maximum number of samples <!--for all channels--> which will be copied
-	  *   on any request.
+	  * Get the maximum number of samples which will be copied on any request.
 	  *  Larger requests are resampled such that their size is less than this
 	  *   value.
 	  *  <p>The default is 100.
@@ -94,8 +85,7 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 	/**
 	  * Sets the minimum decimation factor to apply in all cases.
 	  */
-	public void setMinDecimation(int minDecimation)
-	{ this.minDecimation = minDecimation; }
+	public void setMinDecimation(int minDecimation) { this.minDecimation = minDecimation; }
 	
 //**********************  PlugInTemplate Overrides  *************************//
 	protected void processRequest(ChannelMap fwdData, PlugInChannelMap out)
@@ -103,123 +93,100 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 	{
 		if (fwdData.NumberOfChannels() == 0) return;
 		
-		// Override member defaults with dynamic options: 
-		int minDecimation = this.minDecimation, maxSamples = this.maxSamples;
-		boolean antiAlias = this.antiAlias;
+		int index = 0;
+		Object data;
 		
-		java.util.Properties opts = getRequestOptions();
-		String temp;
-		if ((temp = opts.getProperty("minDecimation")) != null)
-			minDecimation = Integer.parseInt(temp);
-		if ((temp = opts.getProperty("maxSamples")) != null)
-			maxSamples = Integer.parseInt(temp);
-		if ((temp = opts.getProperty("antiAlias")) != null)
-			antiAlias = "true".equals(temp);
-		
-		// 2007/08/15  WHF  maxSamples applies to all channels:
-		// 2007/08/15  WHF  Changed their mind.  Uncomment to re-enable.
-		/*if (fwdData.NumberOfChannels() == 0) return;
-		maxSamples /= fwdData.NumberOfChannels();
-		if (maxSamples < 1) maxSamples = 1; */
+		switch (fwdData.GetType(index)) {
+			case ChannelMap.TYPE_FLOAT32:
+			data = fwdData.GetDataAsFloat32(index);
+			break;
+			
+			case ChannelMap.TYPE_FLOAT64:
+			data = fwdData.GetDataAsFloat64(index);
+			break;
+			
+			case ChannelMap.TYPE_INT16:
+			data = fwdData.GetDataAsInt16(index);
+			break;
 
-		for (int index = 0; index < fwdData.NumberOfChannels(); ++index) {
-			Object data;
-			
-			// Will add if necessary, otherwise just a lookup:
-			int outIndex = out.Add(fwdData.GetName(index));
-			
+			case ChannelMap.TYPE_INT32:
+			data = fwdData.GetDataAsInt32(index);
+			break;
+
+			case ChannelMap.TYPE_INT64:
+			data = fwdData.GetDataAsInt64(index);
+			break;
+
+			case ChannelMap.TYPE_INT8:
+			data = fwdData.GetDataAsInt8(index);
+			break;
+
+			default:
+			System.err.println("ResamplePlugIn: Unsupported datatype.");
+			return;
+		}
+
+		int npts = Array.getLength(data);
+		
+		if (npts <= maxSamples && minDecimation < 2) {
+			// length okay, just copy:
+			out.PutTimeRef(fwdData, index);
+			out.PutDataRef(index, fwdData, index);
+			return;
+		} 
+
+		// Calculate the decimation factor for this set:
+		int ndeci = (int) Math.ceil(((double) npts) / maxSamples);
+		if (ndeci < minDecimation) ndeci = minDecimation;
+		
+		double[] ddata = null;
+		if (antiAlias) {
+			if (fwdData.GetType(index) == ChannelMap.TYPE_FLOAT64) {
+				ddata = (double[]) data;
+			} else {
+				ddata = new double[npts];
+				for (int ii = 0; ii < npts; ++ii)
+					ddata[ii] = Array.getDouble(data, ii);
+			}
+			double[] dataOut = new double[ddata.length];
+			Filter lowPass = new Filter(1.0 / ndeci);
+			lowPass.filter(ddata, dataOut);
+			data = dataOut;
+		}		
+		
+		Object result = decimate(data, ndeci);
+		out.PutTime(
+				fwdData.GetTimeStart(index),
+				fwdData.GetTimeDuration(index)
+		);
+		if (antiAlias) {
+			out.PutDataAsFloat64(index, (double []) result);
+		} else {
 			switch (fwdData.GetType(index)) {
 				case ChannelMap.TYPE_FLOAT32:
-				data = fwdData.GetDataAsFloat32(index);
+				out.PutDataAsFloat32(index, (float []) result);
 				break;
 				
 				case ChannelMap.TYPE_FLOAT64:
-				data = fwdData.GetDataAsFloat64(index);
+				out.PutDataAsFloat64(index, (double []) result);
 				break;
 				
 				case ChannelMap.TYPE_INT16:
-				data = fwdData.GetDataAsInt16(index);
+				out.PutDataAsInt16(index, (short []) result);
 				break;
 	
 				case ChannelMap.TYPE_INT32:
-				data = fwdData.GetDataAsInt32(index);
+				out.PutDataAsInt32(index, (int []) result);
 				break;
 	
 				case ChannelMap.TYPE_INT64:
-				data = fwdData.GetDataAsInt64(index);
+				out.PutDataAsInt64(index, (long []) result);
 				break;
 	
 				case ChannelMap.TYPE_INT8:
-				data = fwdData.GetDataAsInt8(index);
+				out.PutDataAsInt8(index, (byte []) result);
 				break;
-	
-				default:
-				System.err.println("ResamplePlugIn: Unsupported datatype.");
-				return;
-			}
-	
-			int npts = Array.getLength(data);
-			
-			if (npts <= maxSamples && minDecimation < 2) {
-				// length okay, just copy:
-				out.PutTimeRef(fwdData, index);
-				out.PutDataRef(outIndex, fwdData, index);
-				continue;
-			} 
-	
-			// Calculate the decimation factor for this set:
-			int ndeci = (int) Math.ceil(((double) npts) / maxSamples);
-			if (ndeci < minDecimation) ndeci = minDecimation;
-			
-			double[] ddata = null;
-			if (antiAlias) {
-				if (fwdData.GetType(index) == ChannelMap.TYPE_FLOAT64) {
-					ddata = (double[]) data;
-				} else {
-					ddata = new double[npts];
-					for (int ii = 0; ii < npts; ++ii)
-						ddata[ii] = Array.getDouble(data, ii);
-				}
-				double[] dataOut = new double[ddata.length];
-				Filter lowPass = new Filter(1.0 / ndeci);
-				lowPass.filter(ddata, dataOut);
-				data = dataOut;
 			}		
-			
-			Object result = decimate(data, ndeci);
-			out.PutTime(
-					fwdData.GetTimeStart(index),
-					fwdData.GetTimeDuration(index)
-			);
-			if (antiAlias) {
-				out.PutDataAsFloat64(outIndex, (double []) result);
-			} else {
-				switch (fwdData.GetType(index)) {
-					case ChannelMap.TYPE_FLOAT32:
-					out.PutDataAsFloat32(outIndex, (float []) result);
-					break;
-					
-					case ChannelMap.TYPE_FLOAT64:
-					out.PutDataAsFloat64(outIndex, (double []) result);
-					break;
-					
-					case ChannelMap.TYPE_INT16:
-					out.PutDataAsInt16(outIndex, (short []) result);
-					break;
-		
-					case ChannelMap.TYPE_INT32:
-					out.PutDataAsInt32(outIndex, (int []) result);
-					break;
-		
-					case ChannelMap.TYPE_INT64:
-					out.PutDataAsInt64(outIndex, (long []) result);
-					break;
-		
-					case ChannelMap.TYPE_INT8:
-					out.PutDataAsInt8(outIndex, (byte []) result);
-					break;
-				}		
-			}
 		}
 	}
 	
@@ -253,17 +220,14 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 	private boolean antiAlias = false;
 	
 //********************************  Statics  ********************************//
-	private static void showHelp(ResamplePlugIn rpi)
+	public static void showHelp()
 	{
 		System.err.println("ResamplePlugIn [options]\n"
 				+"\t-a address:port        RBNB address (localhost:3333)\n"
 				+"\t-n name                Client name (ResamplePlugIn)\n"
-				+"\t-s max samples         Max samples per request ("
-						+ rpi.maxSamples+")\n"
-				+"\t-m min. decimation     Min decimation factor to apply ("
-						+ rpi.minDecimation+")\n" 
-				+"\t-f true/false          Activates anti-aliasing ("
-						+ rpi.antiAlias+")\n"
+				+"\t-s max samples         Max samples per request (10000)\n"
+				+"\t-m min. decimation     Min decimation factor to apply (0)\n" 
+				+"\t-f true/false          Activates anti-aliasing\n"
 		);
 	}
 	
@@ -280,7 +244,7 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 				
 				// Resample specific:
 				else if ("-h".equals(args[ii]) || "-?".equals(args[ii])) {
-					showHelp(respi);
+					showHelp();
 					return;
 				} else if ("-s".equals(args[ii])) 
 					respi.setMaxSamples(Integer.parseInt(args[++ii]));
@@ -292,7 +256,7 @@ public class ResamplePlugIn extends com.rbnb.plugins.PlugInTemplate
 		} catch (Exception e) {
 			System.err.println("Error with command line arguments.");
 			e.printStackTrace();
-			showHelp(respi);
+			showHelp();
 			return;
 		}
 		

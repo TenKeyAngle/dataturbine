@@ -22,6 +22,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -109,8 +110,7 @@ public class ExportToDT extends JDialog
 	JLabel tempLabel;
         int row = 0;
         
-        //EMF 4/10/07: use Environment font so size can be changed
-        setFont(Environment.FONT12);
+        setFont(new Font("Dialog", Font.PLAIN, 12));
         setBackground(Color.lightGray);
         
         GridBagLayout gbl = new GridBagLayout();

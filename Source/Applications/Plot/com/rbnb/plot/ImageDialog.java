@@ -34,6 +34,7 @@ import java.awt.Container;
 // import java.awt.Dialog;
 import java.awt.Dimension;
 // import java.awt.Frame;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -73,8 +74,7 @@ public class ImageDialog extends JDialog implements ActionListener {
 	
 	ht = h;
 	
- 	//EMF 4/10/07: use Environment font so size can be changed
-	setFont(Environment.FONT12);
+	setFont(new Font("Dialog", Font.PLAIN, 12));
 	GridBagLayout gbl = new GridBagLayout();
 	getContentPane().setLayout(gbl);
 	GridBagConstraints gbc = new GridBagConstraints();

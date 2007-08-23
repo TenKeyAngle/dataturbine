@@ -32,7 +32,7 @@ import com.rbnb.sapi.ChannelMap;
 // 2005/06/29  WHF  Added protect boolean.
 // 2006/09/27  WHF  Removed support for the 'msg' parameter.  Entire query
 //     string now always forwarded.
-// 2007/04/20  WHF  Added plug-in-option parsing.
+//
 
 public class RequestParameters2 implements Cloneable
 {
@@ -303,9 +303,6 @@ public class RequestParameters2 implements Cloneable
 	}
 	public boolean getProtect() { return protect; }
 	
-	public void setPlugInOptions(String[] pio) { plugInOptions = pio; }
-	public String[] getPlugInOptions() { return plugInOptions; }
-	
 	private String queryCat(String a, String b)
 	{
 		if (b == null) return a;
@@ -442,10 +439,6 @@ public class RequestParameters2 implements Cloneable
 		if (temp == null) temp = map.get("protect");
 		if (temp != null) setProtect(((String[]) temp)[0]);
 		
-		// 2007/04/20  WHF  Added.
-		temp = map.get("pio");
-		if (temp != null) setPlugInOptions((String[]) temp);
-		
 		/* 2006/09/27  WHF  No longer available.  requestData set above.
 		temp=map.get("msg");
 		if (temp==null) temp=map.get("message");
@@ -491,8 +484,6 @@ if (temp==null) temp=map.get("requestdata");
 		archive = ARCHIVE_DEFAULT;
 		mux=1; blockSize=1;
 		protect = false;
-		
-		plugInOptions = null;
 	}
 
 	/**
@@ -525,11 +516,6 @@ if (temp==null) temp=map.get("requestdata");
 	  * If true, data is not deleted, only hidden.
 	  */
 	private boolean protect;
-	
-	/**
-	  * If non-null, one or more plug-in options have been set.
-	  */
-	private String[] plugInOptions;
 }
 
 

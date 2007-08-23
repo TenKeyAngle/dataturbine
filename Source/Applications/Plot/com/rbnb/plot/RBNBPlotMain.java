@@ -71,7 +71,7 @@ import java.awt.Dimension;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 // import java.awt.FileDialog;
-//import java.awt.Font;
+import java.awt.Font;
 // import java.awt.Frame;
 import java.awt.Graphics;
 // import java.awt.Label;
@@ -692,9 +692,7 @@ public class RBNBPlotMain extends Applet implements ActionListener,Runnable,Prin
 	rmc = new RunModeCubby(environment.STATICMODE);
 	cc = new ConfigCubby();
 	
-        //EMF 4/10/07: use Environment fonts so size can be changed
-	//setFont(new Font("Dialog", Font.PLAIN, 12));
-	setFont(Environment.FONT12);
+	setFont(new Font("Dialog", Font.PLAIN, 12));
 	
 	// JPW 04/12/2005: Set the look and feel
 	try {
@@ -704,29 +702,22 @@ public class RBNBPlotMain extends Applet implements ActionListener,Runnable,Prin
 	}
 	
 	JMenuBar mb = new JMenuBar();
-        //EMF 4/10/07: use Environment fonts so size can be changed
-	//mb.setFont(new Font("Dialog",Font.PLAIN,12));
-	mb.setFont(Environment.FONT12);
+	mb.setFont(new Font("Dialog",Font.PLAIN,12));
 	JMenu file = new JMenu("File");
-	file.setFont(Environment.FONT12);
 	JMenuItem open = new JMenuItem("Open RBNB");
-	open.setFont(Environment.FONT12);
 	open.addActionListener(this);
 	file.add(open);
 	JMenuItem close = new JMenuItem("Close RBNB");
-	close.setFont(Environment.FONT12);
 	close.addActionListener(this);
 	file.add(close);
 	file.addSeparator();
 	JMenuItem load = new JMenuItem("Load Config");
-	load.setFont(Environment.FONT12);
         //EMF 5/18/01: disable
 	//EMF 3/22/04: enable, but load config from file
 	load.setEnabled(true); //load config not implemented
 	load.addActionListener(this);
 	file.add(load);
 	JMenuItem save = new JMenuItem("Save Config");
-	save.setFont(Environment.FONT12);
         //EMF 5/18/01: disable
 	//EMF 3/22/04: enable again, but save config to file
 	save.setEnabled(true); //save config not implemented
@@ -735,51 +726,42 @@ public class RBNBPlotMain extends Applet implements ActionListener,Runnable,Prin
 	file.addSeparator();
 	// EMF 9/8/99: added Export
 	JMenuItem export = new JMenuItem("Export to Clipboard");
-	export.setFont(Environment.FONT12);
         //EMF 5/18/01: disable
         export.setEnabled(false);
 	export.addActionListener(this);
 	file.add(export);
 	// JPW 4/19/2000: added "Export to DataTurbine"
 	JMenuItem copyToDT = new JMenuItem("Export to DataTurbine");
-	copyToDT.setFont(Environment.FONT12);
         //EMF 5/18/01: disable
 		//EMF 2/2/05: re-enable
         copyToDT.setEnabled(true);
 	copyToDT.addActionListener(this);
 	file.add(copyToDT);
 	JMenuItem print = new JMenuItem("Print");
-	print.setFont(Environment.FONT12);
 	// EMF 4/28/99 //try 1.2 printing 2/27/02
 	print.setEnabled(true); //printing broken until JDK1.1.7 is released
 	print.addActionListener(this);
 	file.add(print);
 	file.addSeparator();
 	JMenuItem exit = new JMenuItem("Exit");
-	exit.setFont(Environment.FONT12);
 	exit.addActionListener(this);
 	file.add(exit);
 	JMenu mode = new JMenu("Mode");
-	mode.setFont(Environment.FONT12);
 	/*
 	 * JPW 04/08/2005: Use JRadioButtonMenuItem instead of check boxes
 	 *
 	ItemListener mil = new ModeItemListener(mode,loc);
 	plot = new JCheckBoxMenuItem("Plot",true);
-	plot.setFont(Environment.FONT12);
 	plot.addItemListener(mil);
 	mode.add(plot);
 	table = new JCheckBoxMenuItem("Table",false);
-	table.setFont(Environment.FONT12);
 	table.addItemListener(mil);
 	mode.add(table);
 	*
 	*/
 	plot = new JRadioButtonMenuItem("Plot");
-	plot.setFont(Environment.FONT12);
 	plot.setSelected(true);
 	table = new JRadioButtonMenuItem("Table");
-	table.setFont(Environment.FONT12);
 	// Add radio buttons to a group
 	ButtonGroup group = new ButtonGroup();
 	group.add(plot);
@@ -801,30 +783,23 @@ public class RBNBPlotMain extends Applet implements ActionListener,Runnable,Prin
 	
 	// JPW 09/16/2005: New Window menu: "Cascade", "Tile", and "Manual"
 	JMenu window=new JMenu("Window");
-	window.setFont(Environment.FONT12);
 	/*
 	//EMF 8/19/05: add Window menu, to control layout of plots
 	JMenuItem cascade=new JMenuItem("Cascade");
-	cascade.setFont(Environment.FONT12);
 	cascade.addActionListener(this);
 	JMenuItem tile=new JMenuItem("Tile");
-	tile.setFont(Environment.FONT12);
 	tile.addActionListener(this);
 	window.add(cascade);
 	window.add(tile);
 	window.addSeparator();
 	auto=new JCheckBoxMenuItem("Auto");
-	auto.setFont(Environment.FONT12);
 	auto.setState(true);
 	auto.addActionListener(this);
 	window.add(auto);
 	*/
 	rbCascade = new JRadioButtonMenuItem("Cascade");
-	rbCascade.setFont(Environment.FONT12);
 	rbTile = new JRadioButtonMenuItem("Tile", true);
-	rbTile.setFont(Environment.FONT12);
 	rbManual = new JRadioButtonMenuItem("Manual");
-	rbManual.setFont(Environment.FONT12);
 	// Add radio buttons to a group
 	ButtonGroup windowgroup = new ButtonGroup();
 	windowgroup.add(rbCascade);
@@ -873,9 +848,7 @@ public class RBNBPlotMain extends Applet implements ActionListener,Runnable,Prin
 	*/
 	//
 	JMenu help = new JMenu("Help");
-	help.setFont(Environment.FONT12);
 	JMenuItem about = new JMenuItem("About");
-	about.setFont(Environment.FONT12);
 	about.addActionListener(this);
 	help.add(about);
 	//MenuItem onlineHelp = new MenuItem("OnLine Documentation");

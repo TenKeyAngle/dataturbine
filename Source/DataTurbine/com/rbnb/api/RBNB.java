@@ -4335,7 +4335,8 @@ final class RBNB
 	setLog(new Log());
         //EMF 11/7/2006: add archive, extend times if trimbytime
         String doTrim=System.getProperty("trimbytime","false");
-	if (!doTrim.equals("false")) {
+	if (doTrim.equals("true")) {
+System.err.println("Trim-By-Time Mode!");
           getLog().setCframes(3600); //one hour
           getLog().setAframes(31536000); //one year
           getLog().setAmode(Source.ACCESS_CREATE);

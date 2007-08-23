@@ -39,8 +39,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  WHF	Fixed ALL_MASK so that it includes WRITE.  Changed toString
- *                	output for easier parsing.
  * 09/28/2004  JPW	To make the code Java 1.1.4 compliant (in order to
  *			compile under J#), remove the use of
  *			Character.toString() in method toString()
@@ -85,9 +83,9 @@ final class AddressPermissions {
      * @author Ian Brown
      *
      * @since V2.3
-     * @version 07/23/2007
+     * @version 04/28/2004
      */
-    public final static int ALL_MASK = 0x1f;
+    public final static int ALL_MASK = 0x0f;
 
     /**
      * the permissions.
@@ -567,27 +565,21 @@ final class AddressPermissions {
      * 09/28/2004  JPW  To make the code Java 1.1.4 compliant (in order to
      *			compile under J#), remove the use of
      *			Character.toString()
-     * 07/23/2007  WHF  Changed to better support parsing.
+     *
      */
     public final String toString() {
-	StringBuffer sb = new StringBuffer(//"Address: " + 
-			getAddress());
+	StringBuffer sb = new StringBuffer("Address: " + getAddress());
 
-	if (permissions != 0) {
-	    //sb.append(" Permissions: ");
-	    sb.append('=');
-	    for (int idx = 0; idx < ACCESS_VALUES.length; ++idx) {
-		if (allowAccess(idx)) {
-		    // JPW 09/28/2004: To make the code Java 1.1.4 compliant (in
-		    //                 order to compile under J#), remove the use
-		    //                 of Character.toString()
-		    // sb.append(Character.toString(ACCESS_VALUES[idx]));
-		    //char charData[] = { ACCESS_VALUES[idx] };
-		    //String tempStr = new String(charData);
-		    //sb.append(tempStr);
-		    // WHF 07/23/2007  Creating a String here is wasteful.
-		    sb.append(ACCESS_VALUES[idx]);
-		}
+	sb.append(" Permissions: ");
+	for (int idx = 0; idx < ACCESS_VALUES.length; ++idx) {
+	    if (allowAccess(idx)) {
+		// JPW 09/28/2004: To make the code Java 1.1.4 compliant (in
+		//                 order to compile under J#), remove the use
+		//                 of Character.toString()
+		// sb.append(Character.toString(ACCESS_VALUES[idx]));
+		char charData[] = { ACCESS_VALUES[idx] };
+		String tempStr = new String(charData);
+		sb.append(tempStr);
 	    }
 	}
 

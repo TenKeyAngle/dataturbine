@@ -65,9 +65,7 @@ import com.rbnb.utility.ToString; /* INB 04/09/98 */
 public class PlotAbscissa extends JComponent {
 	private PosDurCubby posDurCubby=null;
    private Dimension oldSize = new Dimension(0,0);
-   //EMF 4/10/07: use Environment font so size can be changed
-   //private Font f = new Font("Dialog",Font.PLAIN,10);
-   private Font f = Environment.FONT10;
+   private Font f = new Font("Dialog",Font.PLAIN,10);
    private FontMetrics fm=null;
    private int stringOffset = 0;
 	private int ordinateWidth = 0;

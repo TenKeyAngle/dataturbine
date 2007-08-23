@@ -25,7 +25,7 @@ package com.rbnb.api;
  *
  * @see com.rbnb.api.RBNBPlugIn
  * @since V2.0
- * @version 03/12/2007
+ * @version 11/18/2005
  */
 
 /*
@@ -35,10 +35,6 @@ package com.rbnb.api;
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 03/14/2007  WHF      Handle error caused by a sink Monitoring a PlugIn
- *                      which has disconnected and is then trying to reconnect.
- *                      Wait until it is ready before forwarding messages.
- * 03/12/2007  WHF      Subscription modes handled here as repeated requests.
  * 11/18/2005  JPW	For Monitor mode, no longer call post() directly from
  *			accept(); for Monitor, post() will be called from the
  *			thread executing in the run() method.  For Monitor,
@@ -426,27 +422,17 @@ return new String("StreamPlugInListener:"+super.toString());
 	DataRequest original = (DataRequest) getOriginal();
 	boolean isStreaming = original.getNrepetitions() > 1;
 	boolean doRequest = true;
-	TimeRange originalTR;
-	if (original.getNchildren() > 0)
-	    originalTR = original.getChildAt(0).getTrange();
-	else
-	    originalTR = new TimeRange(0.0, 0.0);
-	
 	DataRequest request;	
 	
 	if (isStreaming) {
 	    request = (DataRequest) (original.clone());
-	    // Set repetition count to 1, with optional frame skipping:
-	    request.setRepetitions(1, original.getGapControl() ? 1.0 : 0.0); 
+	    request.setRepetitions(1, 0.0); // no repeats!
 	    if (request.getMode() == DataRequest.FRAMES) {
 		// Either Frame based subscription or Monitor:
-		/* 2007/03/12  WHF  We can now just forward, after
-		    setting the repetition count to one.
 		request.setMode(DataRequest.CONSOLIDATED);
 		request.setReference(DataRequest.NEWEST);
 		request.getChildAt(0).setTrange(new TimeRange(0, 0.0));
 		request.getChildAt(0).setFrange(null);
-		*/
 	    } else {
 		// Time based subscription.
 	    }
@@ -454,13 +440,8 @@ return new String("StreamPlugInListener:"+super.toString());
 	
 	while (true) {
 	    if (doRequest) {
-		PlugInHandler pih = (PlugInHandler) getSource(); 
-		// 2007/03/14  WHF  Try to handle Monitor reconnects:
-		for (int ii = 0; pih.getIsInStartup() && ii < 100; ++ii) {
-		    Thread.sleep(100);
-		}
-//System.err.println("Requesting: "+request);
-		pih.initiateRequest(
+//System.err.println("Requesting: "+request);			
+		((PlugInHandler) getSource()).initiateRequest(
 			request,
 			getNBO().getRequestOptions()
 		);
@@ -481,23 +462,12 @@ return new String("StreamPlugInListener:"+super.toString());
 			 (newestEvent != null) ) {
 		    if (isStreaming) {	   
 			if (newestEvent instanceof EndOfStream) {
-//System.err.println(newestEvent);
-			    if (((EndOfStream) newestEvent).getReason() != 
-				    EndOfStream.REASON_END 
-				    || ((Rmap) newestEvent).getNchildren() == 0) {
-			        // Actual error, no data.  Consume?
-				newestEvent = null;
-				continue;
-			    } else {
-				newestEvent = ((Rmap) newestEvent).getChildAt(0);
-				((Rmap) newestEvent).getParent().removeChildAt(0);
-			    }
+			    newestEvent = ((Rmap) newestEvent).getChildAt(0);
+			    ((Rmap) newestEvent).getParent().removeChildAt(0);
 			}			    
 			
 			TimeRange tr = ((Rmap) newestEvent).summarize().getTrange();
     //System.err.println(tr);
-			/* 2007/03/12  WHF  Original frame-based to time-based
-					translation:
 			if (tr != null) {
 			    // NOTE: We are in a synchronized block, so don't
 			    //       have to add additional synchronization
@@ -513,14 +483,7 @@ return new String("StreamPlugInListener:"+super.toString());
 				// Monitor mode:
 				request.setReference(DataRequest.AFTER);
 			        // This magic offset makes AFTER work as of 2006/11/06.
-				//magicOffset = 2e-7;
-				// 2007/02/23  WHF  Changed magic offset to 
-				//    4e-3 because the old value 'magically'
-				//    no longer works.
-				//magicOffset = 4e-3;
-				// 2007/02/23  WHF  Holy smoke!  After recompiling,
-				//    we need this magic number!!!
-				magicOffset = .5;
+				magicOffset = 2e-7;
 			    } else {
 				// Subscribe, set up 'next' or 'prev' request:
 				request.setReference(DataRequest.ABSOLUTE);
@@ -535,63 +498,23 @@ return new String("StreamPlugInListener:"+super.toString());
 			    request.getChildAt(0).setTrange(new TimeRange(
 				    tr.getTime() + magicOffset, 0.0));
 			    request.getChildAt(0).setFrange(null);
-			} else {
-			    // No data received, resend request after timeout:
-			    // (I did not use a wait() here, because I want a delay before requesting
-			    //   that cannot be altered by the action of other threads.
-			    Thread.sleep(100);
-			} // end if (tr != null) */
-			
-			// 2007/03/12  WHF  Frame based requests:
-			if (tr != null) {
-			    // NOTE: We are in a synchronized block, so don't
-			    //       have to add additional synchronization
-			    //       to protect access to newestEvent
-			    post(newestEvent);
-
-			    if (original.getMode() != DataRequest.FRAMES) {
-				// Time based subscription.
-				// Change request for next time:
-				request = (DataRequest) request.duplicate();
-						    
-				TimeRange tRange, fRange;
-				//if (original.getGapControl()) {
-				// Subscribe, time based,
-				//  set up 'next' or 'prev' request:
-				request.setRepetitions(1, 0.0); // no repeats!
-				request.setMode(DataRequest.CONSOLIDATED);
-				request.setReference(DataRequest.ABSOLUTE);
-				request.setRelationship(
-					original.getIncrement() > 0?
-					DataRequest.GREATER :
-					DataRequest.LESS
-				);
-				tRange = new TimeRange(
-					tr.getTime() + tr.getDuration(), 
-					originalTR.getDuration());
-				fRange = null;
-			    
-				// The time range for the request is stored in the first child:
-				// 2007/03/12  WHF  It might be necessary to set the time
-				//     for all children for a request which spans
-				//     multiple channels.
-				for (int idx = 0; idx < request.getNchildren(); ++idx) {
-				    request.getChildAt(idx).setFrange(fRange);
-				    request.getChildAt(idx).setTrange(tRange);
-				}
-			    } // otherwise, we can reuse the original request.
+			    /*  maxWait does not seem to work as of 2006/11/06:
+			    RequestOptions ro = getNBO().getRequestOptions();
+			    if (ro == null) ro = new RequestOptions();
+			    ro.setMaxWait((long) (tr.getDuration()*1000));
+			    getNBO().setRequestOptions(ro);
+			    */
 			} else {
 			    // No data received, resend request after timeout:
 			    // (I did not use a wait() here, because I want a delay before requesting
 			    //   that cannot be altered by the action of other threads.
 			    Thread.sleep(100);
 			}
-			
 			doRequest = true;
 		    } else {
 			// Not streaming, just post the event:
 			post(newestEvent);
-		    } //end if (isStreaming)
+		    }
 
 		    // Now that we've sent the event off, set our
 		    // class member to null (so we don't end up

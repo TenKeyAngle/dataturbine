@@ -16,6 +16,7 @@ limitations under the License.
 
 
 import java.awt.Checkbox;
+import java.awt.CheckboxGroup;
 import java.awt.Choice;
 import java.awt.Cursor;
 import java.awt.event.ActionEvent;
@@ -24,27 +25,30 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Label;
+import java.awt.Menu;
+import java.awt.MenuBar;
+import java.awt.MenuItem;
 import java.awt.Panel;
+import java.awt.TextField;
 import java.io.ByteArrayOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.SimpleTimeZone;
 import java.util.Vector;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
@@ -63,17 +67,6 @@ import com.rbnb.utility.RBNBProcess;
 // String formatter
 import com.rbnb.utility.ToString;
 import com.rbnb.utility.Utility;
-
-/*
-//JPW 05/31/2007: To marshall KML objects
-import java.io.StringWriter;
-import java.util.List;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import com.rbnb.kml.*;
-*/
 
 /******************************************************************************
  * Produce KML documents for Google Earth which contain track data.
@@ -100,26 +93,16 @@ import com.rbnb.kml.*;
  *
  * @author John P. Wilson
  *
- * @version 07/23/2007
+ * @version 12/01/2006
  */
 
 /*
- * Copyright 2005 - 2007 Creare Inc.
+ * Copyright 2005, 2006 Creare Inc.
  * All Rights Reserved
  *
  *   Date      By	Description
  * MM/DD/YYYY
  * ----------  --	-----------
- * 07/23/2007  JPW	Add "-u" command line options.  This allows a user to
- *			specify a base URL for fetching Placemark icons.  Thus,
- *			instead of bundling icons with the KML file into a
- *			KMZ which is returned to the client, only a KML is
- *			returned.  The Google Earth client will then separately
- *			fetch the icon files, as specified in the KML.
- * 06/04/2007  JPW	Add Icon Scale menu; scale icons (3D and non-3D)
- *			according to this scale.
- * 05/31/2007  JPW	Add support to display a single 3D airplane (from a
- *			".dae" model) as the track icon.
  * 12/01/2006  JPW	Clean up how colors are defined and handled:
  *			    - add Hashtable colors
  *			    - change getHexColorStr() to use Hashtable colors
@@ -236,10 +219,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     private long timeout=60000;
     
     // Variables to store data for one track
-    // JPW 05/31/2007: Add array of times (taken from alt channel); this is
-    //                 used if we want to add placemarks at each track point
-    //                 which are taged with their start and end times.
-    private double[] time = null;
     private float[] alt = null;
     private float[] pAlt = null;
     private double[] heading = null;
@@ -299,9 +278,8 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     // include the prepended "ff" opacity indicator.
     private String constantColorMenuLabel;
     private String colorFromConfigFile = "";
-    private int previousColorByIndex = 0; // previous menu selection, for undo's
-    private int previousLabelByIndex = 0; // previous menu selection, for undo's
-    private int previousScaleByIndex = 0; // previous menu selection, for undo's
+    private int previousColorByIndex = 0; //last selection on menu, for undos
+    private int previousLabelByIndex = 0; //last selection on menu, for undos
     private String iconName = "Red Dot";
     private String iconNameG = "Red Dot";
     private int labelBy = ID;
@@ -314,12 +292,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
     private int colorByG = CLASSIFICATION;
     private boolean showCurtain = false;
     private boolean showCurtainG = false;
-    
-    // JPW 06/04/2007: Add icon scale, used for scaling 3D icon
-    private double iconScale = 1.0;
-    private double iconScaleG = 1.0;
-    // This is the label string for the custom icon scale menu item
-    private String iconScaleMenuLabel = "";
     
     private String configFile = "TrackResources/KMLConfig.txt";
     private String iconsDirectory = "TrackResources/icons/";
@@ -549,8 +521,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		System.err.println("             the Tomcat server, either version 4 or version 5. This is");
 		System.err.println("             only used in NetworkLinks.  This option isn't used if the user");
 		System.err.println("             specifies consolidated responses (the '-C' command line option).");
-		System.err.println("   -u <base URL for fetching icons>");
-		System.err.println("       NOTE: The base URL must start with \"http://\" or \"https://\"");
 		System.err.println("   -w <Tomcat or TimeDrive server address to use in NetworkLink URLs>");
 		System.err.println("       default: localhost:80");
 		System.err.println("       NOTE: This option isn't used if the user specifies consolidated");
@@ -651,35 +621,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		}
 	    }
 	    //
-	    // JPW 07/23/2007: User can specify a URL for fetching icons
-	    // 'u' Base URL for fetching icons
-	    //
-	    if (ah.checkFlag('u')) {
-		String urlStr = ah.getOption('u');
-		if (urlStr != null) {
-		    // Make sure this starts with "http://" or "https://"
-		    if ( !urlStr.startsWith("http://") &&
-			 !urlStr.startsWith("https://") )
-		    {
-			System.err.println(
-			"WARNING: Illegal \"-u\" argument: " +
-			" didn't start with \"http://\" or \"https://\".");
-		    }
-		    else
-		    {
-			iconsDirectory = urlStr;
-			// Make sure this ends with a '/'
-			if (!iconsDirectory.endsWith("/")) {
-			    iconsDirectory = iconsDirectory + "/";
-			}
-		    }
-		} else {
-		    System.err.println(
-			"WARNING: Null argument to the \"-u\"" +
-			" command line option.");
-		}
-	    }
-	    //
 	    // 'w' WebDAV/Tomcat server address
 	    //
 	    if (ah.checkFlag('w')) {
@@ -726,10 +667,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	        "Tomcat/TimeDrive server address: " + webdavAddress);
 	}
 	System.err.println("RBNB Fetch timeout: " + timeout);
-	if (iconsDirectory.startsWith("http")) {
-	    System.err.println(
-	    	"Base URL for fetching icon files: " + iconsDirectory);
-	}
 	
 	// Read the configuration file
 	try {
@@ -788,13 +725,16 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    gbc.fill = GridBagConstraints.NONE;
 	    gbc.weightx = 100;
 	    gbc.weighty = 100;
-	    
+	    gbc.insets = new Insets(0,15,0,5);
+	    Utility.add(guiPanel,new Label("Label",Label.RIGHT),gbl,gbc,0,0,1,1);
+	    if (showTactical) Utility.add(guiPanel,new Label("Sort",Label.RIGHT),gbl,gbc,2,0,1,1);
+	    Utility.add(guiPanel,new Label("Icon",Label.RIGHT),gbl,gbc,4,0,1,1);
+	    Utility.add(guiPanel,new Label("Color",Label.RIGHT),gbl,gbc,6,0,1,1);
+
 	    //make choice pulldowns
-	    choice = new Choice[5];
+	    choice = new Choice[4];
 	    
 	    //label by
-	    gbc.insets = new Insets(5,5,5,2);
-	    Utility.add(guiPanel,new Label("Label",Label.RIGHT),gbl,gbc,0,0,1,1);
 	    choice[0]=new Choice();
 	    choice[0].add("by ID");
 	    if (showTactical) choice[0].add("by Type");
@@ -804,7 +744,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    choice[0].add("by Alt,Lat,Lon");
 	    choice[0].add("None");
 	    choice[0].add("<Custom>");
-	    gbc.insets = new Insets(5,0,5,5);
 	    Utility.add(guiPanel,choice[0],gbl,gbc,1,0,1,1);
 	    choice[0].addItemListener(this);
 	    // Choose the right menu option based on user's selection in config file
@@ -830,18 +769,11 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    }
 	    
 	    //sort by
-	    if (showTactical) {
-		gbc.insets = new Insets(5,0,5,2);
-		Utility.add(guiPanel,new Label("Sort",Label.RIGHT),gbl,gbc,2,0,1,1);
-	    }
 	    choice[1]=new Choice();
 	    choice[1].add("by ID");
 	    choice[1].add("by Type");
 	    choice[1].add("by Class");
-	    if (showTactical) {
-		gbc.insets = new Insets(5,0,5,5);
-		Utility.add(guiPanel,choice[1],gbl,gbc,3,0,1,1);
-	    }
+	    if (showTactical) Utility.add(guiPanel,choice[1],gbl,gbc,3,0,1,1);
 	    choice[1].addItemListener(this);
 	    // Choose the right menu option based on user's selection in config file
 	    if (sortByG == TYPE) {
@@ -855,17 +787,13 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    }
 	    
 	    //icon by
-	    gbc.insets = new Insets(5,0,5,2);
-	    Utility.add(guiPanel,new Label("Icon",Label.RIGHT),gbl,gbc,4,0,1,1);
 	    choice[2]=new Choice();
 	    if (showTactical) choice[2].add("by Type");
 	    if (showTactical) choice[2].add("by Class");
 	    choice[2].add("Red Dot");
 	    choice[2].add("Red Square");
 	    choice[2].add("Airplane");
-	    choice[2].add("3D Airplane");
 	    choice[2].add("None");
-	    gbc.insets = new Insets(5,0,5,5);
 	    Utility.add(guiPanel,choice[2],gbl,gbc,5,0,1,1);
 	    choice[2].addItemListener(this);
 	    // Choose the right menu option based on user's selection in config file
@@ -877,8 +805,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		choice[2].select("Red Square");
 	    } else if ( (iconByG == CONSTANT) && (iconNameG.equals("Airplane")) ) {
 		choice[2].select("Airplane");
-	    } else if ( (iconByG == CONSTANT) && (iconNameG.equals("3D Airplane")) ) {
-		choice[2].select("3D Airplane");
 	    } else if (iconByG == NONE) {
 		choice[2].select("None");
 	    } else {
@@ -893,104 +819,39 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		}
 	    }
 	    
-	    // JPW 06/04/2007: Add 3D icon scale
-	    gbc.insets = new Insets(5,0,5,2);
-	    Utility.add(guiPanel,new Label("Icon Scale",Label.RIGHT),gbl,gbc,6,0,1,1);
+	    //color by
 	    choice[3]=new Choice();
-	    choice[3].add("0.1");
-	    choice[3].add("0.2");
-	    choice[3].add("0.5");
-	    choice[3].add("1.0");
-	    choice[3].add("2.0");
-	    choice[3].add("5.0");
-	    choice[3].add("10.0");
-	    choice[3].add("20.0");
-	    choice[3].add("50.0");
-	    choice[3].add("100.0");
-	    choice[3].add("200.0");
-	    choice[3].add("500.0");
-	    choice[3].add("1000.0");
+	    if (showTactical) choice[3].add("by Type");
+	    if (showTactical) choice[3].add("by Class");
+	    choice[3].add("Red");
+	    choice[3].add("Green");
+	    choice[3].add("Blue");
+	    choice[3].add("Yellow");
+	    choice[3].add("Purple");
+	    choice[3].add("Aqua");
 	    choice[3].add("<Custom>");
-	    gbc.insets = new Insets(5,0,5,5);
 	    Utility.add(guiPanel,choice[3],gbl,gbc,7,0,1,1);
 	    choice[3].addItemListener(this);
 	    // Choose the right menu option based on user's selection in config file
-	    if (iconScaleG == 0.1) {
-		choice[3].select("0.1");
-	    } else if (iconScaleG == 0.2) {
-		choice[3].select("0.2");
-	    } else if (iconScaleG == 0.5) {
-		choice[3].select("0.5");
-	    } else if (iconScaleG == 1.0) {
-		choice[3].select("1.0");
-	    } else if (iconScaleG == 2.0) {
-		choice[3].select("2.0");
-	    } else if (iconScaleG == 5.0) {
-		choice[3].select("5.0");
-	    } else if (iconScaleG == 10.0) {
-		choice[3].select("10.0");
-	    } else if (iconScaleG == 20.0) {
-		choice[3].select("20.0");
-	    } else if (iconScaleG == 50.0) {
-		choice[3].select("50.0");
-	    } else if (iconScaleG == 100.0) {
-		choice[3].select("100.0");
-	    } else if (iconScaleG == 200.0) {
-		choice[3].select("200.0");
-	    } else if (iconScaleG == 500.0) {
-		choice[3].select("500.0");
-	    } else if (iconScaleG == 1000.0) {
-		choice[3].select("1000.0");
-	    } else {
-		// User must have entered a custom value; only set it if
-		// value is greater than 0.0
-		if (iconScaleG > 0.0) {
-		    iconScaleMenuLabel = Double.toString(iconScaleG);
-		    choice[3].insert(iconScaleMenuLabel,13);
-		    choice[3].select(13);
-		} else {
-		    choice[3].select("1.0");
-		    iconScaleG = 1.0;
-		}
-	    }
-	    
-	    
-	    //color by
-	    gbc.insets = new Insets(5,0,5,2);
-	    Utility.add(guiPanel,new Label("Color",Label.RIGHT),gbl,gbc,8,0,1,1);
-	    choice[4]=new Choice();
-	    if (showTactical) choice[4].add("by Type");
-	    if (showTactical) choice[4].add("by Class");
-	    choice[4].add("Red");
-	    choice[4].add("Green");
-	    choice[4].add("Blue");
-	    choice[4].add("Yellow");
-	    choice[4].add("Purple");
-	    choice[4].add("Aqua");
-	    choice[4].add("<Custom>");
-	    gbc.insets = new Insets(5,0,5,5);
-	    Utility.add(guiPanel,choice[4],gbl,gbc,9,0,1,1);
-	    choice[4].addItemListener(this);
-	    // Choose the right menu option based on user's selection in config file
 	    if ( (showTactical) && (colorByG == TYPE) ) {
-		choice[4].select("by Type");
+		choice[3].select("by Type");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("red")) ) {
-		choice[4].select("Red");
+		choice[3].select("Red");
 		constantColorG = getHexColorStr("red");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("green")) ) {
-		choice[4].select("Green");
+		choice[3].select("Green");
 		constantColorG = getHexColorStr("green");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("blue")) ) {
-		choice[4].select("Blue");
+		choice[3].select("Blue");
 		constantColorG = getHexColorStr("blue");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("yellow")) ) {
-		choice[4].select("Yellow");
+		choice[3].select("Yellow");
 		constantColorG = getHexColorStr("yellow");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("purple")) ) {
-		choice[4].select("Purple");
+		choice[3].select("Purple");
 		constantColorG = getHexColorStr("purple");
 	    } else if ( (colorByG == CONSTANT) && (colorFromConfigFile.equals("aqua")) ) {
-		choice[4].select("Aqua");
+		choice[3].select("Aqua");
 		constantColorG = getHexColorStr("aqua");
 	    } else if (colorByG == CONSTANT) {
 		// See if the user has entered a valid color
@@ -1004,21 +865,21 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    if (showTactical) {
 			menuInt = 8;
 		    }
-		    choice[4].insert(constantColorMenuLabel,menuInt);
-		    choice[4].select(menuInt);
+		    choice[3].insert(constantColorMenuLabel,menuInt);
+		    choice[3].select(menuInt);
 		} else {
 		    // User did not enter a valid color in config file;
 		    // use the default
 		    if (showTactical) {
 			colorByG = CLASSIFICATION;
-			choice[4].select(1);
+			choice[3].select(1);
 			System.err.println(
 			    "User made an unrecognizable color selection: " +
 			    colorFromConfigFile +
 			    "; using color by classification");
 		    } else {
 			colorByG = CONSTANT;
-			choice[4].select("Red");
+			choice[3].select("Red");
 			constantColorG = getHexColorStr("red");
 			System.err.println(
 			    "User made an unrecognizable color selection: " +
@@ -1030,18 +891,17 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		// The default
 		if (showTactical) {
 		    colorByG = CLASSIFICATION;
-		    choice[4].select("by Class");
+		    choice[3].select("by Class");
 		} else {
 		    colorByG = CONSTANT;
-		    choice[4].select("Red");
+		    choice[3].select("Red");
 		    constantColorG = getHexColorStr("red");
 		}
 	    }
 	    
 	    //show curtain
 	    checkbox=new Checkbox("Show Curtain",showCurtainG);
-	    gbc.insets = new Insets(5,15,5,5);
-	    Utility.add(guiPanel,checkbox,gbl,gbc,10,0,1,1);
+	    Utility.add(guiPanel,checkbox,gbl,gbc,8,0,1,1);
 	    checkbox.addItemListener(this);
 	    
 	    frame.add(guiPanel);
@@ -1202,10 +1062,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		iconByG=CONSTANT;
 		iconNameG = "Airplane";
 	    }
-	    else if (temp.trim().equalsIgnoreCase("3d_airplane")) {
-		iconByG=CONSTANT;
-		iconNameG = "3D Airplane";
-	    }
 	    else if (temp.trim().equalsIgnoreCase("none")) iconByG=NONE;
 	    else {
 		iconByG=TYPE;
@@ -1213,27 +1069,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    "Unknown iconBy field: " +
 		    temp.trim() +
 		    "; setting iconBy TYPE");
-	    }
-	}
-	
-	// JPW 06/04/2007: Add icon scale
-	temp = (String)hashtable.get("iconScale");
-	if ( (temp != null) &&
-	     (!temp.trim().equals("")) )
-	{
-	    // See if the value parses to a floating point num greater than 0.0
-	    try {
-		iconScaleG = Double.parseDouble(temp.trim());
-		if (iconScaleG <= 0.0) {
-		    throw new NumberFormatException("Invalid value");
-		}
-	    } catch (NumberFormatException nfe) {
-		iconScaleG = 1.0;
-		System.err.println(
-		    "Invalid iconScale field: " +
-		    temp.trim() +
-		    "; setting iconScale to " +
-		    iconScaleG);
 	    }
 	}
 	
@@ -1520,115 +1355,34 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    } else if (choice[2].getSelectedItem().equals("Airplane")) {
 		iconByG = CONSTANT;
 		iconNameG = "Airplane";
-	    } else if (choice[2].getSelectedItem().equals("3D Airplane")) {
-		iconByG = CONSTANT;
-		iconNameG = "3D Airplane";
 	    } else if (choice[2].getSelectedItem().equals("None")) iconByG = NONE;
 	}
-	// change iconScale?
-	else if (source == choice[3]) {
-	    if (choice[3].getSelectedItem().equals("0.1")) {
-		iconScaleG = 0.1;
-	    } else if (choice[3].getSelectedItem().equals("0.2")) {
-		iconScaleG = 0.2;
-	    } else if (choice[3].getSelectedItem().equals("0.5")) {
-		iconScaleG = 0.5;
-	    } else if (choice[3].getSelectedItem().equals("1.0")) {
-		iconScaleG = 1.0;
-	    } else if (choice[3].getSelectedItem().equals("2.0")) {
-		iconScaleG = 2.0;
-	    } else if (choice[3].getSelectedItem().equals("5.0")) {
-		iconScaleG = 5.0;
-	    } else if (choice[3].getSelectedItem().equals("10.0")) {
-		iconScaleG = 10.0;
-	    } else if (choice[3].getSelectedItem().equals("20.0")) {
-		iconScaleG = 20.0;
-	    } else if (choice[3].getSelectedItem().equals("50.0")) {
-		iconScaleG = 50.0;
-	    } else if (choice[3].getSelectedItem().equals("100.0")) {
-		iconScaleG = 100.0;
-	    } else if (choice[3].getSelectedItem().equals("200.0")) {
-		iconScaleG = 200.0;
-	    } else if (choice[3].getSelectedItem().equals("500.0")) {
-		iconScaleG = 500.0;
-	    } else if (choice[3].getSelectedItem().equals("1000.0")) {
-		iconScaleG = 1000.0;
-	    }  else if (choice[3].getSelectedItem().equals(iconScaleMenuLabel)) {
-		try {
-		    iconScaleG = Double.parseDouble(iconScaleMenuLabel);
-		    if (iconScaleG <= 0.0) {
-			throw new NumberFormatException("Invalid value");
-		    }
-		} catch (NumberFormatException nfe) {
-		    choice[3].select(previousScaleByIndex);
-		    System.err.println("Invalid icon scale menu label: unexpected error");
-		}
-	    } else if (choice[3].getSelectedItem().equals("<Custom>")) {
-		JOptionPane jop=new JOptionPane();
-		String temp =
-		    jop.showInputDialog(
-			frame,
-			"Enter the icon scale (floating point value greater than 0.0).",
-			iconScaleMenuLabel);
-		if (temp==null) { //user hit cancel; return to previous state
-		    choice[3].select(previousScaleByIndex);
-		} else {
-		    // See if the user has entered a valid scale
-		    try {
-			double tempIconScaleG = Double.parseDouble(temp);
-			if (tempIconScaleG <= 0.0) {
-			    throw new NumberFormatException("Invalid value");
-			}
-			iconScaleG = tempIconScaleG;
-			iconScaleMenuLabel = Double.toString(iconScaleG);
-			int place=choice[3].getSelectedIndex();
-			if (!choice[3].getItem(place-1).equals("1000.0")) {
-			    // There is an existing custom scale menu item;
-			    // remove it before adding the new one
-			    place--;
-			    choice[3].remove(place);
-			}
-			choice[3].insert(iconScaleMenuLabel,place);
-			choice[3].select(place);
-		    } catch (NumberFormatException nfe) {
-			// pop error dialog, return to previous state
-			choice[3].select(previousScaleByIndex);
-			jop.showMessageDialog(
-			    frame,
-			    "Scale must be a floating point value greater than 0.0.",
-			    "Invalid scale specified",
-			    JOptionPane.ERROR_MESSAGE);
-		    }
-		}
-	    }
-	    previousScaleByIndex = choice[3].getSelectedIndex();
-	}
 	//change color by?
-	else if (source == choice[4]) {
-	    if (choice[4].getSelectedItem().equals("by Type")) colorByG = TYPE;
-	    else if (choice[4].getSelectedItem().equals("by Class")) colorByG = CLASSIFICATION;
-	    else if (choice[4].getSelectedItem().equals("Red")) {
+	else if (source == choice[3]) {
+	    if (choice[3].getSelectedItem().equals("by Type")) colorByG = TYPE;
+	    else if (choice[3].getSelectedItem().equals("by Class")) colorByG = CLASSIFICATION;
+	    else if (choice[3].getSelectedItem().equals("Red")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("red");
-	    } else if (choice[4].getSelectedItem().equals("Green")) {
+	    } else if (choice[3].getSelectedItem().equals("Green")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("green");
-	    } else if (choice[4].getSelectedItem().equals("Blue")) {
+	    } else if (choice[3].getSelectedItem().equals("Blue")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("blue");
-	    } else if (choice[4].getSelectedItem().equals("Yellow")) {
+	    } else if (choice[3].getSelectedItem().equals("Yellow")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("yellow");
-	    } else if (choice[4].getSelectedItem().equals("Purple")) {
+	    } else if (choice[3].getSelectedItem().equals("Purple")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("purple");
-	    } else if (choice[4].getSelectedItem().equals("Aqua")) {
+	    } else if (choice[3].getSelectedItem().equals("Aqua")) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr("aqua");
-	    } else if (choice[4].getSelectedItem().equals(constantColorMenuLabel)) {
+	    } else if (choice[3].getSelectedItem().equals(constantColorMenuLabel)) {
 		colorByG = CONSTANT;
 		constantColorG = getHexColorStr(constantColorMenuLabel);
-	    } else if (choice[4].getSelectedItem().equals("<Custom>")) {
+	    } else if (choice[3].getSelectedItem().equals("<Custom>")) {
 		JOptionPane jop=new JOptionPane();
 		String temp =
 		    jop.showInputDialog(
@@ -1636,7 +1390,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 			"Enter the color in hex as bbggrr.",
 			constantColorMenuLabel);
 		if (temp==null) { //user hit cancel; return to previous state
-		    choice[4].select(previousColorByIndex);
+		    choice[3].select(previousColorByIndex);
 		} else {
 		    // See if the user has entered a valid color
 		    String tempConstantColorG = getHexColorStr(temp);
@@ -1645,19 +1399,19 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 			// Remove the leading "ff" opacity specification for
 			// the color string before showing it on the menu
 			constantColorMenuLabel = constantColorG.substring(2);
-			int place=choice[4].getSelectedIndex();
-			if (!choice[4].getItem(place-1).equals("Aqua")) {
+			int place=choice[3].getSelectedIndex();
+			if (!choice[3].getItem(place-1).equals("Aqua")) {
 			    // There is an existing custom color menu item;
 			    // remove it before adding the new one
 			    place--;
-			    choice[4].remove(place);
+			    choice[3].remove(place);
 			}
-			choice[4].insert(constantColorMenuLabel,place);
-			choice[4].select(place);
+			choice[3].insert(constantColorMenuLabel,place);
+			choice[3].select(place);
 			colorByG = CONSTANT;
 		    } else {
 			// pop error dialog, return to previous state
-			choice[4].select(previousColorByIndex);
+			choice[3].select(previousColorByIndex);
 			jop.showMessageDialog(
 			    frame,
 			    "Color must be 6 hex digits.",
@@ -1666,7 +1420,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    }
 		}
 	    }
-	    previousColorByIndex = choice[4].getSelectedIndex();
+	    previousColorByIndex = choice[3].getSelectedIndex();
 	}
 	
 	//change show curtain?
@@ -1866,7 +1620,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    labelBy=labelByG;
 	    constantLabel=constantLabelG;
 	    iconBy=iconByG;
-	    iconScale=iconScaleG;
 	    iconName=iconNameG;
 	    colorBy=colorByG;
 	    constantColor=constantColorG;
@@ -1950,25 +1703,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 			} else if (kmlIcon.equalsIgnoreCase("Airplane")) {
 			    iconBy=CONSTANT;
 			    iconName="Airplane";
-			} else if (kmlIcon.equalsIgnoreCase("3D_Airplane")) {
-			    iconBy=CONSTANT;
-			    iconName="3D Airplane";
 			} else if (kmlIcon.equalsIgnoreCase("None")) iconBy=NONE;
-		    }
-		    // JPW 06/04/2007: Add icon scale
-		    String kmlIconScale = kvh.get("KmlIconScale");
-		    if (kmlIconScale!=null) {
-			// See if this string parses to be a floating point
-			// value greater than zero
-			try {
-			    double tempIconScale = Double.parseDouble(kmlIconScale);
-			    if (tempIconScale <= 0.0) {
-				throw new NumberFormatException("Invalid value");
-			    }
-			    iconScale = tempIconScale;
-			} catch (NumberFormatException nfe) {
-			    // Not a valid value; just ignore it
-			}
 		    }
 		    String kmlColor = kvh.get("KmlColor");
 		    if (kmlColor!=null) {
@@ -2463,7 +2198,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      * @param referenceI	   Request reference (newest, oldest, absolute)
      * @param pseudoAltChanIdxI    Index of the pseudo-alt channel (or -1 if there is none)
      *
-     * @version 06/04/2007
+     * @version 12/19/2006
      */
     
     /*
@@ -2471,8 +2206,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
      *   Date      By	Description
      * MM/DD/YYYY
      * ----------  --	-----------
-     * 06/04/2007  JPW  Support display of a single 3D icon at head of track.
-     *			Scale 3D as well as non-3D icons using "iconScale".
      * 12/19/2006  JPW  For pseudo-alt, no longer use a hardwired heading=0
      *			or hardwired icon=red dot.
      * 10/11/2006  JPW	Add support for pseudo-alt - display a track for
@@ -2538,17 +2271,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    }
 	    double starttime = startI + durationI;
 	    if (referenceI.equals("newest")) {
-		// JPW 05/31/2007: Only subtract durationI from startI if durationI is negative
-		//                 Remember: "newest" is a backward looking request.  We want the
-		//                 "current" datapoint here - the most recent data point over the
-		//                 requested duration.  Therefore, if durationI is positive (as it
-		//                 will usually be) then the most recent point will be at startI.
-		// starttime = startI - durationI;
-		if (durationI >= 0.0) {
-		    starttime = startI;
-		} else {
-		    starttime = startI - durationI;
-		}
+		starttime = startI - durationI;
 		if (starttime < 0.0) {
 		    starttime = 0.0;
 		}
@@ -2661,16 +2384,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    // No need to do anything; just use default heading = 0.0
 	}
 	
-	// JPW 06/04/2007: Placeholders for heading, pitch, and roll values
-	String currentHeadingStr = "0";
-	String currentPitchStr = "0";
-	String currentRollStr = "0";
-	try {
-	    currentHeadingStr = ToString.toString("%.6f",heading);
-	} catch (Exception e) {
-	    currentHeadingStr = Double.toString(heading);
-	}
-	
 	///////////////////////////////////////////
 	// The main alt/lat/lon placemark and track
 	///////////////////////////////////////////
@@ -2681,36 +2394,29 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    
 	    kmlSB.append(
 		"<Placemark id=\"" + trackName + "\">\n" +
-		
 		"<Style id=\"" + styleID + "\">\n" +
 		"<LineStyle>\n" +
 		"<color>" + color + "</color>\n" +
 		"<width>2</width>\n" +
 		"</LineStyle>\n" +
-		// The following specifies the curtain color, used when extruding
+		// JPW 04/17/2006: Turn on extrusion at Larry's request; the following specifies the curtain color
 		"<PolyStyle>\n" +
 		"<color>7f00007f</color>\n" +
 		"</PolyStyle>\n" +
 		"<IconStyle>\n" +
-		"<scale>" + Double.toString(iconScale) + "</scale>\n" +
 		"<heading>" + heading + "</heading>\n" +
 		"<Icon>\n");
-	    
-	    // JPW 06/05/2007: Only specify Icon details if user has not
-	    //                 selected a .dae model
-	    if ( (icon[0] != null) && (!icon[0].endsWith(".dae")) ) {
-		kmlSB.append(
-		    "<href>" + icon[0] + "</href>\n" +
-		    "<x>" + icon[1] + "</x>\n" +
-		    "<y>" + icon[2] + "</y>\n" +
-		    "<w>32</w>\n" +
-		    "<h>32</h>\n");
+	    if (icon[0]!=null) {
+		kmlSB.append("<href>" + icon[0] + "</href>\n" +
+		"<x>" + icon[1] + "</x>\n" +
+		"<y>" + icon[2] + "</y>\n" +
+		"<w>32</w>\n" +
+		"<h>32</h>\n");
 	    }
-	    
-	    kmlSB.append(
-		"</Icon>\n" +
+	    kmlSB.append("</Icon>\n" +
 		"</IconStyle>\n" +
 		"</Style>\n");
+	    
 	    
 	    // JPW 08/23/2006: There may be data to display with the name
 	    // NOTE: code copied below in the pseudoAlt section...change must
@@ -2738,6 +2444,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		}
 		kmlSB.append("</name>\n");
 	    }
+	    
 	    
 	    kmlSB.append(
 	    	"<Snippet maxLines=\"0\">\n" +
@@ -2794,13 +2501,14 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		"</LookAt>\n" +
 		"<visibility>1</visibility>\n" +
 		"<MultiGeometry>\n" +
+		
 		"<styleUrl>#" + styleID + "</styleUrl>\n" +
+		
 		"<Point>\n");
-	    
-	    if (showCurtain) kmlSB.append("<extrude>1</extrude>\n");
-	    
-	    kmlSB.append(
-	    	"<altitudeMode>absolute</altitudeMode>\n" +
+		
+		if (showCurtain) kmlSB.append("<extrude>1</extrude>\n");
+		
+		kmlSB.append("<altitudeMode>absolute</altitudeMode>\n" +
 		"<coordinates>\n" +
 		// Write out the most current position
 		lastLonStr +
@@ -2810,41 +2518,12 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		lastAltStr +
 		"\n" +
 		"</coordinates>\n" +
-		"</Point>\n");
-	    
-	    if ( (icon[0] != null) && (icon[0].endsWith(".dae")) ) {
-		// User has specified to use a 3D model for the track icon
-		kmlSB.append(
-		    "<Model>\n" +
-		    "<altitudeMode>absolute</altitudeMode>\n" +
-		    "<Location>\n" +
-		    "<longitude>" + lastLonStr + "</longitude>\n" +
-		    "<latitude>" + lastLatStr + "</latitude>\n" +
-		    "<altitude>" + lastAltStr + "</altitude>\n" +
-		    "</Location>\n" +
-		    "<Orientation>\n" +
-		    "<heading>" + currentHeadingStr + "</heading>\n" +
-		    "<tilt>" + currentPitchStr + "</tilt>\n" +
-		    "<roll>" + currentRollStr + "</roll>\n" +
-		    "</Orientation>\n" +
-		    "<Scale>\n" +
-		    "<x>" + Double.toString(iconScale) + "</x>\n" +
-		    "<y>" + Double.toString(iconScale) + "</y>\n" +
-		    "<z>" + Double.toString(iconScale) + "</z>\n" +
-		    "</Scale>\n" +
-		    "<Link>\n" +
-		    "<href>" + icon[0] + "</href>\n" +
-		    "</Link>\n" +
-		    "</Model>\n");
-	    }
-	    
-	    kmlSB.append(
+		"</Point>\n" +
 		"<LineString id=\"Track\">\n");
-	    
-	    if (showCurtain) kmlSB.append("<extrude>1</extrude>\n");
-	    
-	    kmlSB.append(
-		"<tessellate>0</tessellate>\n" +
+		
+		if (showCurtain) kmlSB.append("<extrude>1</extrude>\n");
+		
+		kmlSB.append("<tessellate>0</tessellate>\n" +
 		"<altitudeMode>absolute</altitudeMode>\n" +
 		"<coordinates>\n");
 	    
@@ -2967,7 +2646,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	
 	kmlSB.append(
 	    "<Placemark id=\"pseudoalt\">\n" +
-	    
 	    "<Style id=\"pseudoaltstyle\">\n" +
 	    "<LineStyle>\n" +
 	    "<color>" + color + "</color>\n" +
@@ -2978,13 +2656,17 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    "<color>7f00007f</color>\n" +
 	    "</PolyStyle>\n" +
 	    "<IconStyle>\n" +
-	    "<scale>" + Double.toString(iconScale) + "</scale>\n" +
+	    // JPW 12/19/2006: Don't use hard-wired heading or icon
+	    // "<heading>0.0</heading>\n" +
+	    // "<Icon>\n" +
+	    // "<href>root://icons/palette-4.png</href>\n" +
+	    // "<x>32</x>\n" +
+	    // "<y>32</y>\n" +
+	    // "<w>32</w>\n" +
+	    // "<h>32</h>\n" +
 	    "<heading>" + heading + "</heading>\n" +
 	    "<Icon>\n");
-	
-	// JPW 06/05/2007: Only specify Icon details if user has not
-	//                 selected a .dae model
-	if ( (icon[0] != null) && (!icon[0].endsWith(".dae")) ) {
+	if (icon[0]!=null) {
 	    kmlSB.append(
 		"<href>" + icon[0] + "</href>\n" +
 		"<x>" + icon[1] + "</x>\n" +
@@ -2992,7 +2674,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		"<w>32</w>\n" +
 		"<h>32</h>\n");
 	}
-	
 	kmlSB.append(
 	    "</Icon>\n" +
 	    "</IconStyle>\n" +
@@ -3052,35 +2733,7 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    lastScaledPaltStr +
 	    "\n" +
 	    "</coordinates>\n" +
-	    "</Point>\n");
-	
-	if ( (icon[0] != null) && (icon[0].endsWith(".dae")) ) {
-	    // User has specified to use a 3D model for the track icon
-	    kmlSB.append(
-		"<Model>\n" +
-		"<altitudeMode>absolute</altitudeMode>\n" +
-		"<Location>\n" +
-		"<longitude>" + lastLonStr + "</longitude>\n" +
-		"<latitude>" + lastLatStr + "</latitude>\n" +
-		"<altitude>" + lastScaledPaltStr + "</altitude>\n" +
-		"</Location>\n" +
-		"<Orientation>\n" +
-		"<heading>" + currentHeadingStr + "</heading>\n" +
-		"<tilt>" + currentPitchStr + "</tilt>\n" +
-		"<roll>" + currentRollStr + "</roll>\n" +
-		"</Orientation>\n" +
-		"<Scale>\n" +
-		"<x>" + Double.toString(iconScale) + "</x>\n" +
-		"<y>" + Double.toString(iconScale) + "</y>\n" +
-		"<z>" + Double.toString(iconScale) + "</z>\n" +
-		"</Scale>\n" +
-		"<Link>\n" +
-		"<href>" + icon[0] + "</href>\n" +
-		"</Link>\n" +
-		"</Model>\n");
-	}
-	
-	kmlSB.append(
+	    "</Point>\n" +
 	    "<LineString id=\"pseudoaltlinestring\">\n");
 	
 	if (showCurtain) kmlSB.append("<extrude>1</extrude>\n");
@@ -3136,6 +2789,15 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	    "</LineString>\n" +
 	    "</MultiGeometry>\n" +
 	    "</Placemark>\n");
+	
+	/////////////////////////////
+	// Return if not using offset
+	/////////////////////////////
+	if (!bUsePseudoAltOffset) {
+	    kmlStr = kmlSB.toString();
+	    kmlSB = null;
+	    return kmlStr;
+	}
 	
 	kmlStr = kmlSB.toString();
 	kmlSB = null;
@@ -3237,8 +2899,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 	int pseudoAltChanIdxI)
     {
 	
-	// JPW 06/04/2007: Add time array
-	time = null;
 	alt = null;
 	pAlt = null;
 	lat = null;
@@ -3305,8 +2965,6 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    alt = null;
 		    return false;
 		}
-		// JPW 06/04/2007: Get time array from alt channel
-		time = cmI.GetTimes(i);
 	    } else if (chan.equals(idChanName)) {
 		// id should be string data; we only store one value
 		if (cmI.GetType(i) == ChannelMap.TYPE_STRING) {
@@ -3864,31 +3522,23 @@ public class TrackKMLPlugIn implements ActionListener, ItemListener {
 		    icon[1]="0";
 		    icon[2]="0";
 		    break;
-		} else if (iconName.equals("3D Airplane")) {
-		    icon[0]=iconsDirectory + "aircraft.dae";
-		    icon[1]="0";
-		    icon[2]="0";
-		    break;
 		}
-	    
+		
 	    case NONE:
 	    	icon[0]=null;
 		icon[1]=null;
 		icon[2]=null;
 		break;
-	    
+
 	    default:
 		icon[0]="root://icons/palette-2.png"; //airplane
 		icon[1]="0";
 		icon[2]="0";
 	}
 	
-	// JPW 07/23/2007: Add check on "http://" and "https://"
-	if ( (icon[0] != null)                &&
-	     (!iconsUsed.contains(icon[0]))   &&
-	     (!icon[0].startsWith("root"))    &&
-	     (!icon[0].startsWith("http://")) &&
-	     (!icon[0].startsWith("https://")) )
+	if ( (icon[0] != null) &&
+	     (!iconsUsed.contains(icon[0])) &&
+	     (!icon[0].startsWith("root")) )
 	{
 	    iconsUsed.add(icon[0]);
 	}

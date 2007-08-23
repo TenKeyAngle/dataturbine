@@ -39,7 +39,7 @@ import java.util.Stack;
 
 import org.xml.sax.*;
 
-public abstract class KmlMonitor extends HttpMonitor
+public class KmlMonitor extends HttpMonitor
 {
 	/**
 	  * Reads KmlMonitor configuration files.
