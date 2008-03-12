@@ -10,9 +10,9 @@ We have a couple of public servers at SDSC/UCSD, these pages detail what we have
 Sun T2000, 32 cores, 16GB of memory, quad gigabit ethernet, with a Caen 9TB SATA-to-SCSI RAID chassis. Physically located in Calit2 (Atkinson) Hall, first floor machine room. Pictures to be posted.
 
 niagara has 4 IPs on 4 different interfaces:
- *niagara Main, production use
- *niagara-stage.sdsc.edu Mid stage between development and production
- *niagara-dev.sdsc.edu Development instance, may be down at any time
+ * niagara Main, production use
+ * niagara-stage.sdsc.edu Mid stage between development and production
+ * niagara-dev.sdsc.edu Development instance, may be down at any time
 
 All have DataTurbine instances running on them, 4GB of memory each. All have the RAID chassis for archiving, which means that they can hold a *lot* of data.
 
@@ -21,7 +21,7 @@ All have DataTurbine instances running on them, 4GB of memory each. All have the
 OS is Solaris 10 2/08, with the RAID chassis formatted as a single ZFS container. 
 
 To-do
- *Format the second 73G system disk - mirror? More space? Backup?
+ * Format the second 73G system disk - mirror? More space? Backup?
 
 == iguassu.sdsc.edu ==
 
@@ -32,6 +32,6 @@ Dell PowerEdge 1435, 2 dual-core Opteron CPUs, 2GB of memory, 2 gigabit ports, i
  IP 137.110.118.250, gateway .1, class C.
 
 To-do
- *OS reinstall
- *Account setup
- *Install of RBNB Rocks roll 
+ * OS reinstall
+ * Account setup
+ * Install of RBNB Rocks roll 
