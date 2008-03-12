@@ -27,7 +27,7 @@ To-do
 
 Dell PowerEdge 1435, 2 dual-core Opteron CPUs, 2GB of memory, 2 gigabit ports, internal SATA drive. Install proceeding as of March 12 2008, need to re-do the Rocks OS and go from there. 
 
-(Named for Iguasu Falls, in South America)
+(Named for [http://en.wikipedia.org/wiki/Iguassu_Falls Iguassu Falls], in South America)
 
  IP 137.110.118.250, gateway .1, class C.
 
