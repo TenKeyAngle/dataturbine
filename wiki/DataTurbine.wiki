@@ -1,5 +1,7 @@
-# The DataTurbine is a Java-based network ring buffer for numeric, audio, video, text and binary data. 
+#summary The DataTurbine is a Java-based network ring buffer for numeric, audio, video, text and binary data.
 
 = !DataTurbine=
 
-see http://dataturbine.org
+The DataTurbine is a Java-based network ring buffer for numeric, audio, video, text and binary data.
+
+see http://dataturbine.org for now, Wiki just begun.
