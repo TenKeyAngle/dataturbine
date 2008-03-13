@@ -1,13 +1,10 @@
-#DataTurbine WikiHome (self explanatory)
+#summary DataTurbine WikiHome (self explanatory)
 
 = Welcome to the DataTurbine Developers Wiki =
 
-No content at this time.
+Minimal content so far, edit away! I'm thinking
 
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+ * Source and sink documentation, scripts and notes
+ * Device compatability
+ * Server issues, scaling and provisioning
+ * Programmer notes
