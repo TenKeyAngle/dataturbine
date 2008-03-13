@@ -34,4 +34,13 @@ Dell PowerEdge 1435, 2 dual-core Opteron CPUs, 2GB of memory, 2 gigabit ports, i
 To-do
  * OS reinstall
  * Account setup
- * Install of RBNB Rocks roll 
+ * Install of RBNB Rocks roll
+
+== phalanx.sdsc.edu ==
+Dell Precision 470, dual Intel Xenon 300MHz, 1G memory, 500G storage, RHEL 4
+
+137.110.118.150
+
+Primary usage is as a backup RBNB dev server.
+
+Host to legacy cvs repository of CLEOS.
