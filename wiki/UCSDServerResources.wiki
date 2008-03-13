@@ -37,10 +37,17 @@ To-do
  * Install of RBNB Rocks roll
 
 == phalanx.sdsc.edu ==
-Dell Precision 470, dual Intel Xenon 300MHz, 1G memory, 500G storage, RHEL 4
+Dell Precision 470, dual Intel Xenon 3GHz, 1G memory, 500G storage, RHEL 4
 
 137.110.118.150
 
 Primary usage is as a backup RBNB dev server.
 
 Host to legacy cvs repository of CLEOS.
+
+== devastator.sdsc.edu == 
+Dell PWS390, core2 quad 2.66GHz, 3.5G memory, 296G storage, MS Windows Vista
+
+137.110.118.52
+
+Primary uses are LabVIEW development and portability testing for RBNB and its applications 
