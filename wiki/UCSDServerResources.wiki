@@ -37,7 +37,7 @@ To-do
  * Install of RBNB Rocks roll
 
 == phalanx.sdsc.edu ==
-Dell Precision 470, dual Intel Xenon 3GHz, 1G memory, 500G storage, RHEL 4
+Dell Precision 470, dual Intel Xeon 3GHz, 1G memory, 500G storage, RHEL 4
 
 137.110.118.150
 
