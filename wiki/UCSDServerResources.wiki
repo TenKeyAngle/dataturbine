@@ -25,7 +25,7 @@ To-do
 
 == iguassu.sdsc.edu ==
 
-Dell PowerEdge 1435, 2 dual-core Opteron CPUs, 6GB of memory, 2 gigabit ports, 2x nternal 750GB SATA drive. Installed Debian 4.0 3/24/08, to be configured.
+Dell PowerEdge 1435, 2 dual-core 2.0GHz Opteron CPUs, 6GB of memory, 2 gigabit ports, 2x internal 750GB SATA drive. Installed Debian 4.0 3/24/08, to be configured.
 
 (Named for [http://en.wikipedia.org/wiki/Iguassu_Falls Iguassu Falls], in South America)
 
