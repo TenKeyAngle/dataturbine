@@ -1,0 +1,2 @@
+Main-Class: com.rbnb.xmldemux.XMLDemux
+Class-Path: rbnb.jar
